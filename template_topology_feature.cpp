@@ -5,14 +5,17 @@
 #include "opencv2/highgui/highgui.hpp"
 #include <math.h>
 #include <vector>
+#include <fstream>
 
 using namespace std;
 using namespace cv;
 
 Mat template_splitRegion(Mat template_hsv);
 Mat re_label(Mat label_template_img);
+Mat cleanLabelImage(Mat dst_data);
 void featureDetection(Mat label_template_img, vector<vector<int> > *sum_one_dimention_scanning, vector<vector<int> > *sum_xy, vector<vector<int> > *sum_boundary, vector<vector<double> > *sum_ave_keypoint);
 void saveFeaturePoint (int x, int y, vector<int> one_dimention_scanning, vector<int> word_list, int tmp_boundary, vector<vector<int> > *sum_one_dimention_scanning, vector<vector<int> > *sum_xy, vector<vector<int> > *sum_boundary, vector<vector<double> > *sum_ave_keypoint);
+void writeFeaturePoint(Mat template_img, vector<vector<int> > *sum_one_dimention_scanning, vector<vector<int> > *sum_xy, vector<vector<int> > *sum_boundary, vector<vector<double> > *sum_ave_keypoint);
 
 
 int main(int argc, char** argv){
@@ -20,6 +23,9 @@ int main(int argc, char** argv){
   Mat template_hsv;
   Mat label_template_img;
   Mat dst_data;
+  Mat clean_label_img;
+
+
 
 //featureDetection variables
   vector<vector<int> > sum_one_dimention_scanning;
@@ -30,16 +36,43 @@ int main(int argc, char** argv){
   cvtColor(template_img, template_hsv, CV_BGR2HSV);
 
   label_template_img = template_splitRegion(template_hsv);
-  imwrite("label_template_img.tif", label_template_img);
+  imwrite("label_template_img.jpg", label_template_img);
 
   dst_data = re_label(label_template_img);
   imwrite("dst_data.jpg", dst_data);
 
-  cout << "feature detection" << endl;
-  featureDetection(dst_data, &sum_one_dimention_scanning, &sum_xy, &sum_boundary, &sum_ave_keypoint);
-  cout << "finish feature detection" << endl;
+  clean_label_img = cleanLabelImage(dst_data);
+  imwrite("cleaned_dst_data.jpg", clean_label_img);
+  cout << "end label_img cleaning" << endl;
 
-  //featureDescription(sum_one_dimention_scanning, sum_xy, dst_data);
+  cout << "feature detection" << endl;
+  featureDetection(clean_label_img, &sum_one_dimention_scanning, &sum_xy, &sum_boundary, &sum_ave_keypoint);
+/*
+  cout << "===============================================================" << endl;
+  for (int i = 0; i < sum_one_dimention_scanning.size(); i++){
+    cout << "sum_one_dimention_sacnning = ";
+    for (int j = 0; j < sum_one_dimention_scanning[0].size(); j++){
+      cout << sum_one_dimention_scanning[i][j] << ", ";
+    }
+    cout << endl;
+    cout << "sum_xy = ";
+    for (int a = 0; a < sum_xy[0].size(); a++){
+      cout << sum_xy[i][a] << ", ";
+    }
+    cout << endl;
+    for (int a = 0; a < sum_boundary[0].size(); a++){
+      cout << "sum_boundary = " << sum_boundary[i][a]  << ", ";
+    }
+    cout << endl;
+    for (int a = 0; a < sum_ave_keypoint[0].size(); a++){
+      cout << "sum_ave_keypoint = " << sum_ave_keypoint[i][a] << ", ";
+    }
+    cout << endl;
+    cout << "============================================" << endl;
+  }
+  cout << "finish feature detection" << endl;
+*/
+  writeFeaturePoint(template_img, &sum_one_dimention_scanning, &sum_xy, &sum_boundary, &sum_ave_keypoint);
   return 0;
 }
 
@@ -52,8 +85,6 @@ Mat template_splitRegion(Mat template_hsv){
 
   split(template_hsv, planes);
   v_value = planes[2];
-  //imwrite("v_value.png", v_value);
-  //waitKey(0);
 
   for(int y = 0; y < template_y; y++ ){
     for (int x = 0; x < template_x; x++){
@@ -64,6 +95,12 @@ Mat template_splitRegion(Mat template_hsv){
 
   float separation_list[256];
   int tmp_range = 15;
+  for(int i = 0; i < tmp_range; i++){
+    separation_list[i] = 0;
+  }
+  for(int i = 256 - tmp_range; i < sizeof(separation_list)/ sizeof(separation_list[0]); i++){
+    separation_list[i] = 0;
+  }
 
   for(int i = 0 + tmp_range; i < 256 - tmp_range; i++){
     float sum_k = 0;
@@ -164,8 +201,6 @@ Mat template_splitRegion(Mat template_hsv){
 
   int label_list[256];
   int b = 1;
-  label_list[0] = 0;
-  label_list[255] = 0;
   for(int a = 0 + 1; a < 256 - 1; a++){
     label_list[a] = b;
     if(separation_list[a] > separation_list[a-1] &&
@@ -175,13 +210,16 @@ Mat template_splitRegion(Mat template_hsv){
         label_list[a] = b;
     }
   }
+  label_list[0] = label_list[1];
+  label_list[255] = label_list[254];
 
   cout << "label_list" << endl;
   for(int i = 0; i < sizeof(label_list)/ sizeof(label_list[0]); i++){
     cout << label_list[i] << ", ";
   }
   cout << endl;
-
+  cout << endl;
+  cout << endl;
 
   Mat label_template_img = Mat(template_y, template_x, CV_8UC1);
 
@@ -199,7 +237,7 @@ Mat re_label(Mat label_template_img){
   int template_x = label_template_img.cols;
   int template_y = label_template_img.rows;
 
-  Mat dst_data = Mat(template_y, template_x, CV_8UC1);
+  Mat dst_data = Mat(template_y, template_x, CV_16U);
   int next_label = 1;
   int area_template = template_y * template_x;
   int table[area_template];
@@ -211,27 +249,27 @@ Mat re_label(Mat label_template_img){
   for (int y = 0; y < template_y; y++){
     for (int x = 0; x < template_x; x++){
       if (x == 0 && y == 0){
-        dst_data.at<unsigned char>(y,x) = next_label;
+        dst_data.at<unsigned short>(y,x) = next_label;
         next_label++;
         continue;
       }
       if (y == 0){
         if (label_template_img.at<unsigned char>(y,x) == label_template_img.at<unsigned char>(y,x-1)){
-          dst_data.at<unsigned char>(y,x) = dst_data.at<unsigned char>(y, x-1);
+          dst_data.at<unsigned short>(y,x) = dst_data.at<unsigned short>(y, x-1);
         }else{
-          dst_data.at<unsigned char>(y,x) = next_label;
+          dst_data.at<unsigned short>(y,x) = next_label;
           next_label++;
-          continue;
         }
+        continue;
       }
       if (x == 0){
         if (label_template_img.at<unsigned char>(y,x) == label_template_img.at<unsigned char>(y-1,x)){
-          dst_data.at<unsigned char>(y,x) = dst_data.at<unsigned char>(y-1,x);
+          dst_data.at<unsigned short>(y,x) = dst_data.at<unsigned short>(y-1,x);
         }else{
-          dst_data.at<unsigned char>(y,x) = next_label;
+          dst_data.at<unsigned short>(y,x) = next_label;
           next_label++;
-          continue;
-          }
+        }
+        continue;
       }
 
       int s1 = label_template_img.at<unsigned char>(y,x-1);
@@ -240,12 +278,14 @@ Mat re_label(Mat label_template_img){
       if (label_template_img.at<unsigned char>(y,x) == s2 &&
           label_template_img.at<unsigned char>(y,x) == s1){
 
-        int ai = dst_data.at<unsigned char>(y,x-1);
-        int bi = dst_data.at<unsigned char>(y-1,x);
+        int ai = dst_data.at<unsigned short>(y,x-1);
+        int bi = dst_data.at<unsigned short>(y-1,x);
 
         if (ai != bi){
+          int cnt = 1;
           while(table[ai] != ai){
             ai = table[ai];
+            cnt++;
           }
           while(table[bi] != bi){
             bi = table[bi];
@@ -255,28 +295,27 @@ Mat re_label(Mat label_template_img){
           }
         }
         if (ai < bi){
-          dst_data.at<unsigned char>(y,x) = ai;
+          dst_data.at<unsigned short>(y,x) = ai;
         }else{
-          dst_data.at<unsigned char>(y,x) = bi;
+          dst_data.at<unsigned short>(y,x) = bi;
         }
         continue;
       }
 
       if (label_template_img.at<unsigned char>(y,x) == s2){
-        dst_data.at<unsigned char>(y,x) =  dst_data.at<unsigned char>(y-1,x);
+        dst_data.at<unsigned short>(y,x) =  dst_data.at<unsigned short>(y-1,x);
         continue;
       }
 
        if (label_template_img.at<unsigned char>(y,x) == s1){
-        dst_data.at<unsigned char>(y,x) =  dst_data.at<unsigned char>(y,x-1);
+        dst_data.at<unsigned short>(y,x) =  dst_data.at<unsigned short>(y,x-1);
         continue;
       }
 
-      dst_data.at<unsigned char>(y,x) = next_label;
+      dst_data.at<unsigned short>(y,x) = next_label;
       next_label++;
     }
   }
-
   int index;
   for (int ix = 0; ix < next_label; ix++){
     index = ix;
@@ -298,12 +337,123 @@ Mat re_label(Mat label_template_img){
 
   for (int y = 0; y < template_y; y++){
     for (int x = 0; x < template_x; x++){
-      int tables = table[dst_data.at<unsigned char>(y,x)];
-      dst_data.at<unsigned char>(y,x) = label[tables];
+      int tables = table[dst_data.at<unsigned short>(y,x)];
+      dst_data.at<unsigned short>(y,x) = label[tables];
     }
   }
+  ofstream ofs("dst_data.csv");
+  ofs << dst_data << endl;
+
   return dst_data;
 }
+
+Mat cleanLabelImage(Mat dst_data){
+
+  int x_size = dst_data.cols;
+  int y_size = dst_data.rows;
+  //距離画像
+  Mat tmp_dst_data = Mat::zeros(y_size, x_size, CV_8UC1);
+
+  //dst_dataの最大値を求める(maxVal)
+  double maxVal;
+  minMaxLoc(dst_data, NULL, &maxVal);
+
+  //maxValの大きさの配列を作る
+  vector<unsigned short> label_list(maxVal, 0);
+  unsigned short label;
+
+  for(int y = 0; y < y_size; y++){
+    for(int x = 0; x < x_size; x++){
+      label = dst_data.at<unsigned short>(y, x);
+      label_list[label] += 1;
+    }
+  }
+
+  //パッチサイズよりも小さい領域を0にする
+  for(int i = 0; i < label_list.size(); i++){
+    if(label_list[i] < 49){
+      for(int y = 0; y < y_size; y++){
+        for(int x = 0; x < x_size; x++){
+          if(dst_data.at<unsigned short>(y, x) == i){
+            dst_data.at<unsigned short>(y, x) = 0;
+          }
+        }
+      }
+    }
+  }
+  //ofstream of_zero("dst_data_in_cleanLanelImage0.csv");
+  //of_zero << dst_data << endl;
+
+
+
+  //１回目のスキャン．左上から右下へ
+  for(int y = 1; y < y_size; y++){
+    for(int x = 1; x < x_size; x++){
+
+      if(dst_data.at<unsigned short>(y, x) == 0){
+        unsigned short dst_up = dst_data.at<unsigned short>(y-1, x);
+        unsigned short dst_left = dst_data.at<unsigned short>(y, x-1);
+        int tmp_dst_up = tmp_dst_data.at<int>(y-1, x);
+        int tmp_dst_left = tmp_dst_data.at<int>(y, x-1);
+
+        //上と左の画素を見て面積の大きい方をラベル画像に代入
+        if(label_list[dst_up] >= label_list[dst_left]){
+          dst_data.at<unsigned short>(y, x) = dst_up;
+        }else{
+          dst_data.at<unsigned short>(y, x) = dst_left;
+        }
+        //上と左の画素を見て値の小さい方に+1して代入
+        if(tmp_dst_up >= tmp_dst_left){
+          tmp_dst_data.at<int>(y, x) = tmp_dst_left + 1;
+        }else{
+          tmp_dst_data.at<int>(y, x) = tmp_dst_up + 1;
+        }
+      }
+    }
+  }
+  //ofstream of_one("dst_data_in_cleanLanelImage1.csv");
+  //of_one << dst_data << endl;
+  //cout << dst_data << endl;
+
+  //２回目のスキャン．右下から左上へ
+  for(int y = y_size - 2; y > 1; y--){
+    for(int x = x_size - 2; x > 1; x--){
+
+      if(tmp_dst_data.at<int>(y, x) > 0){
+        unsigned short dst_down = dst_data.at<unsigned short>(y+1, x);
+        unsigned short dst_right = dst_data.at<unsigned short>(y, x+1);
+        int tmp_dst_down = tmp_dst_data.at<int>(y+1, x);
+        int tmp_dst_right = tmp_dst_data.at<int>(y, x+1);
+
+        //距離画像に対して１回目のスキャンのときの値よりも小さい値を代入できる時
+        if(tmp_dst_data.at<int>(y, x) < tmp_dst_down + 1
+          || tmp_dst_data.at<int>(y, x) < tmp_dst_right + 1){
+
+          //下と右の画素を見て面積の大きい方をラベル画像に代入
+          if(label_list[dst_down] >= label_list[dst_right]){
+            dst_data.at<unsigned short>(y, x) = dst_down;
+          }else{
+            dst_data.at<unsigned short>(y, x) = dst_right;
+          }
+          //下と右の画素を見て値の小さい方に+1して代入
+          if(tmp_dst_down >= tmp_dst_right){
+            tmp_dst_data.at<int>(y, x) = tmp_dst_right + 1;
+          }else{
+            tmp_dst_data.at<int>(y, x) = tmp_dst_down + 1;
+          }
+        }
+      }
+    }
+  }
+  //ofstream of_two("dst_data_in_cleanLanelImage2.csv");
+  //of_two << dst_data << endl;
+
+  cout << "end clean_label_img out" << endl;
+
+
+  return dst_data;
+}
+
 
 void featureDetection(Mat label_template_img, vector<vector<int> > *sum_one_dimention_scanning, vector<vector<int> > *sum_xy, vector<vector<int> > *sum_boundary, vector<vector<double> > *sum_ave_keypoint){
 
@@ -317,127 +467,122 @@ void featureDetection(Mat label_template_img, vector<vector<int> > *sum_one_dime
   int n = 16;
   int one_n = 16;
 
+
   Mat scanning_filter = Mat(n, n, CV_8UC1);
   int scan_x = scanning_filter.cols;
   int scan_y = scanning_filter.rows;
+
 
   for(int y = 0; y < y_size - scan_y; y += 3){
     for(int x = 0; x < x_size - scan_x; x += 3){
       for(int s_y = 0; s_y < scan_y; s_y++){
         for(int s_x = 0; s_x < scan_x; s_x++){
-          scanning_filter.at<unsigned char>(s_y, s_x) = label_template_img.at<unsigned char>(s_y + y, s_x + x);
-          int one_d_data[] = {scanning_filter.at<unsigned char>(0,3),scanning_filter.at<unsigned char>(0,4),scanning_filter.at<unsigned char>(1,5),scanning_filter.at<unsigned char>(2,6),scanning_filter.at<unsigned char>(3,6),scanning_filter.at<unsigned char>(4,6),scanning_filter.at<unsigned char>(5,5),scanning_filter.at<unsigned char>(6,4),scanning_filter.at<unsigned char>(6,3),scanning_filter.at<unsigned char>(6,2),scanning_filter.at<unsigned char>(5,1),scanning_filter.at<unsigned char>(4,0),scanning_filter.at<unsigned char>(3,0),scanning_filter.at<unsigned char>(2,0),scanning_filter.at<unsigned char>(1,1),scanning_filter.at<unsigned char>(0,2)};
+          scanning_filter.at<unsigned short>(s_y, s_x) = label_template_img.at<unsigned short>(s_y + y, s_x + x);
+        }
+      }
+          int one_d_data[] = {scanning_filter.at<unsigned short>(0,3),scanning_filter.at<unsigned short>(0,4),scanning_filter.at<unsigned short>(1,5),scanning_filter.at<unsigned short>(2,6),scanning_filter.at<unsigned short>(3,6),scanning_filter.at<unsigned short>(4,6),scanning_filter.at<unsigned short>(5,5),scanning_filter.at<unsigned short>(6,4),scanning_filter.at<unsigned short>(6,3),scanning_filter.at<unsigned short>(6,2),scanning_filter.at<unsigned short>(5,1),scanning_filter.at<unsigned short>(4,0),scanning_filter.at<unsigned short>(3,0),scanning_filter.at<unsigned short>(2,0),scanning_filter.at<unsigned short>(1,1),scanning_filter.at<unsigned short>(0,2)};
 
           vector<int> one_dimention_scanning(one_d_data,end(one_d_data));
-          int scanning_center = {scanning_filter.at<unsigned char>(3,3)};
+          int scanning_center = {scanning_filter.at<unsigned short>(3,3)};
           int one_d_count = 0;
 
+
+          //one_d_count パッチの切れ目を数える
           for (int one_d = 0; one_d < one_n - 1; one_d++){
             if(one_dimention_scanning[one_d] != one_dimention_scanning[one_d + 1]){
               one_d_count ++;
             }
           }
+          //パッチ上のピクセルがプレーンな点は処理しない
+          if(one_d_count != 0){
+            //one_dimention_scanningの要素の種類とその数をリスト
+            vector<int> word_list;
+            vector<int> cnt_list;
+            int one_d_size = one_dimention_scanning.size();
 
-          //one_dimention_scanningの要素の種類とその数をリスト
-          vector<int> word_list;
-          vector<int> cnt_list;
-          int one_d_size = one_dimention_scanning.size();
+            word_list.push_back(one_dimention_scanning[0]);
+            cnt_list.push_back(1);
 
-          word_list.push_back(one_dimention_scanning[0]);
-          cnt_list.push_back(1);
-
-          for(int o = 1; o < one_d_size; o++){
-            int match = 0;
-            for (int w = 0; w < word_list.size(); w++){
-              if (word_list[w] == one_dimention_scanning[o]){
-                cnt_list[w] += 1;
-                match = 1;
+            for(int o = 1; o < one_d_size; o++){
+              int match = 0;
+              for (int w = 0; w < word_list.size(); w++){
+                if (word_list[w] == one_dimention_scanning[o]){
+                  cnt_list[w] += 1;
+                  match = 1;
+                }
               }
-            }
-              if(match == 0){
-                word_list.push_back(one_dimention_scanning[o]);
-                cnt_list.push_back(1);
-              }
-         }
+                if(match == 0){
+                  word_list.push_back(one_dimention_scanning[o]);
+                  cnt_list.push_back(1);
+                }
+           }
+
+            //cnt_listの最小値をとる
+            int min_cnt = *min_element(cnt_list.begin(), cnt_list.end());
+            //cnt_listの最小値のためのイテレータ
+            vector<int>::iterator min_cntIt = min_element(cnt_list.begin(), cnt_list.end());
+            //cnt_listの最小値のインデックス
+            size_t cnt_minIndex = distance(cnt_list.begin(), min_cntIt);
+
 /*
-         cout << "-------------------one_d_lists----------------------" << endl;
-         cout << "one_d_count = " << one_d_count <<endl;
-         cout << "one_dimention_scanning = ";
-         for (int a = 0; a < one_d_size; a++){
-           cout << one_dimention_scanning[a] << ", ";
-         }
-         cout << endl;
-         cout << "word_list = ";
-         for (int i = 0; i < word_list.size(); i++){
-             cout << word_list[i] << ", ";
-         }
-         cout << endl;
-         cout << "cnt_list  = ";
-         for (int j = 0; j < cnt_list.size(); j++){
-             cout << cnt_list[j] << ", ";
-         }
-         cout << endl;
+            cout << "-------------------one_d_lists----------------------" << endl;
+          cout << "scanning_center = " << scanning_center << endl;
+          cout << "word_list.size() = " << word_list.size() << endl;
+            cout << "one_d_count = " << one_d_count <<endl;
+            cout << "one_dimention_scanning = ";
+            for (int a = 0; a < one_d_size; a++){
+              cout << one_dimention_scanning[a] << ", ";
+            }
+            cout << endl;
+            cout << "word_list = ";
+            for (int i = 0; i < word_list.size(); i++){
+              cout << word_list[i] << ", ";
+            }
+            cout << endl;
+            cout << "cnt_list  = ";
+            for (int j = 0; j < cnt_list.size(); j++){
+               cout << cnt_list[j] << ", ";
+            }
+            cout << endl;
+            cout << "min word_list = " << word_list[cnt_minIndex] << endl;
+            cout << "one_dimention_scanning[0] = " << one_dimention_scanning[0] << endl;
+            cout << "one_dimention_scanning[15] = " << one_dimention_scanning[15] << endl;
 */
 
 
-          //cnt_listの最小値をとる
-          int min_cnt = *min_element(cnt_list.begin(), cnt_list.end());
-          //cnt_listの最小値のためのイテレータ
-          vector<int>::iterator min_cntIt = min_element(cnt_list.begin(), cnt_list.end());
-          //cnt_listの最小値のインデックス
-          size_t cnt_minIndex = distance(cnt_list.begin(), min_cntIt);
-
-          vector<int> element_check(one_dimention_scanning[0]);
-          for (int i = 1; i <= one_dimention_scanning.size(); i++){
-            for (int j = 0; j < element_check.size(); j++){
-                if(element_check[j] != one_dimention_scanning[i]){
-                  element_check.push_back(one_dimention_scanning[i]);
+            //要素数が2,短い方のラベルが中心画素と同じ
+            if(one_d_count == 1){
+              if(word_list.size() == 2 && scanning_center == word_list[cnt_minIndex]){
+                //最も小さいラベルが120度以下
+                if(min_cnt <= one_n / 3){
+                  //word_listの合計を求める
+                  int tmp_boundary = 2;
+                  saveFeaturePoint(x, y, one_dimention_scanning, word_list, tmp_boundary, &this_sum_one_dimention_scanning, &this_sum_xy, &this_sum_boundary, &this_sum_ave_keypoint);
                 }
+              }
             }
-          }
-
-          //要素数が2,短い方のラベルが中心画素と同じ
-          if(one_d_count == 1){
-            if(element_check.size() == 2 && scanning_center == word_list[cnt_minIndex]){
-              //最も小さいラベルが120度以下
-              if(min_cnt <= one_n / 3){
-                //word_listの合計を求める
+            else if(one_d_count == 2){
+              if(word_list.size() == 3){
+                int tmp_boundary = 3;
+                saveFeaturePoint(x, y, one_dimention_scanning,word_list, tmp_boundary, &this_sum_one_dimention_scanning, &this_sum_xy, &this_sum_boundary, &this_sum_ave_keypoint);
+                }
+              if (one_dimention_scanning[0] == one_dimention_scanning[15] && scanning_center == word_list[cnt_minIndex]){
+                //最も小さいラベルが120度以下
+                if(min_cnt <= one_n / 3){
                 int tmp_boundary = 2;
-                saveFeaturePoint(x, y, one_dimention_scanning, word_list, tmp_boundary, &this_sum_one_dimention_scanning, &this_sum_xy, &this_sum_boundary, &this_sum_ave_keypoint);
+                saveFeaturePoint(x, y, one_dimention_scanning,word_list, tmp_boundary, &this_sum_one_dimention_scanning, &this_sum_xy, &this_sum_boundary, &this_sum_ave_keypoint);
+                }
               }
-            }
           }
-          else if(one_d_count == 2){
-            if(element_check.size() == 3){
-              int tmp_boundary = 3;
-              saveFeaturePoint(x, y, one_dimention_scanning,word_list, tmp_boundary, &this_sum_one_dimention_scanning, &this_sum_xy, &this_sum_boundary, &this_sum_ave_keypoint);
+          else if(one_d_count == 3){
+              if (one_dimention_scanning[0] == one_dimention_scanning[15]){
+                //最も小さいラベルが120度以下
+                int tmp_boundary = 3;
+                saveFeaturePoint(x, y, one_dimention_scanning,word_list, tmp_boundary, &this_sum_one_dimention_scanning, &this_sum_xy, &this_sum_boundary, &this_sum_ave_keypoint);
               }
-            if (one_dimention_scanning[0] == one_dimention_scanning[-1] && scanning_center == word_list[cnt_minIndex]){
-              //最も小さいラベルが120度以下
-              if(min_cnt <= one_n / 3){
-              int tmp_boundary = 2;
-              saveFeaturePoint(x, y, one_dimention_scanning,word_list, tmp_boundary, &this_sum_one_dimention_scanning, &this_sum_xy, &this_sum_boundary, &this_sum_ave_keypoint);
-              }
-            }
-        }
-        else if(one_d_count == 3){
-            if (one_dimention_scanning[0] == one_dimention_scanning[-1]){
-              //最も小さいラベルが120度以下
-              int tmp_boundary = 3;
-              saveFeaturePoint(x, y, one_dimention_scanning,word_list, tmp_boundary, &this_sum_one_dimention_scanning, &this_sum_xy, &this_sum_boundary, &this_sum_ave_keypoint);
-            }
-         }
-        }
-      }
+           }
+          }
     }
-  }
-
-  cout << "this_sum_one_dimention_sacnning " << endl;
-  for (int i = 0; i < this_sum_one_dimention_scanning.size(); i++){
-    for (int j = 0; j < this_sum_one_dimention_scanning[0].size(); j++){
-      cout << this_sum_one_dimention_scanning[i][j] << ", ";
-    }
-    cout << endl;
   }
 
   //return
@@ -470,11 +615,52 @@ void saveFeaturePoint (int x, int y, vector<int> one_dimention_scanning,vector<i
 
   this_sum_one_dimention_scanning.push_back(one_dimention_scanning);
 
-  tmp_sum_xy.push_back(x+3);
   tmp_sum_xy.push_back(y+3);
+  tmp_sum_xy.push_back(x+3);
+
   this_sum_xy.push_back(tmp_sum_xy);
 
   tmp_sum_boundary.push_back(tmp_boundary);
   this_sum_boundary.push_back(tmp_sum_boundary);
+
+  //return
+  *sum_one_dimention_scanning = this_sum_one_dimention_scanning;
+  *sum_xy = this_sum_xy;
+  *sum_boundary = this_sum_boundary;
+  *sum_ave_keypoint = this_sum_ave_keypoint;
 }
 
+//カラー画像に特徴点をマッピング
+void writeFeaturePoint(Mat template_img, vector<vector<int> > *sum_one_dimention_scanning, vector<vector<int> > *sum_xy, vector<vector<int> > *sum_boundary, vector<vector<double> > *sum_ave_keypoint){
+
+   vector<vector<int> > this_sum_one_dimention_scanning = *sum_one_dimention_scanning;
+  vector<vector<int> > this_sum_xy = *sum_xy;
+  vector<vector<int> > this_sum_boundary = *sum_boundary;
+  vector<vector<double> > this_sum_ave_keypoint = *sum_ave_keypoint;
+
+
+  for(int i = 0; i < this_sum_xy.size(); i++){
+    vector<int> center = this_sum_xy[i];
+    vector<int> top_left(2,0);
+    vector<int> bottom_right(2,0);
+
+    for(int i = 0; i < center.size(); i++){
+      top_left[i] = center[i] - 3;
+      bottom_right[i] = center[i] + 3;
+    }
+
+    if(this_sum_boundary[i][0] == 2){
+      template_img.at<Vec3b>(center[0],center[1])[0] = 255;
+      template_img.at<Vec3b>(center[0],center[1])[1] = 0;
+      template_img.at<Vec3b>(center[0],center[1])[2] = 0;
+      rectangle(template_img, Point(top_left[1],top_left[0]), Point(bottom_right[1],bottom_right[0]), Scalar(255,0,0), 1);
+    }
+    else if(this_sum_boundary[i][0] == 3){
+      template_img.at<Vec3b>(center[0],center[1])[0] = 0;
+      template_img.at<Vec3b>(center[0],center[1])[1] = 255;
+      template_img.at<Vec3b>(center[0],center[1])[2] = 0;
+      rectangle(template_img, Point(top_left[1],top_left[0]), Point(bottom_right[1],bottom_right[0]), Scalar(0,255,0), 1);
+    }
+  }
+  imwrite("detect_feature_point.jpg",template_img);
+}
