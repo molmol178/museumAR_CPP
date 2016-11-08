@@ -10,22 +10,42 @@
 using namespace std;
 using namespace cv;
 
-Mat template_splitRegion(Mat template_hsv);
+Mat template_splitRegion(int tmp_range, Mat template_hsv);
 Mat re_label(Mat label_template_img);
-Mat cleanLabelImage(Mat dst_data);
-void featureDetection(Mat label_template_img, vector<vector<int> > *sum_one_dimention_scanning, vector<vector<int> > *sum_xy, vector<vector<int> > *sum_boundary, vector<vector<double> > *sum_ave_keypoint);
+Mat cleanLabelImage(Mat dst_data, int patch_size);
+
+Mat writeDstData(Mat clean_label_img);
+void featureDetection(int patch_size, Mat label_template_img, vector<vector<int> > *sum_one_dimention_scanning, vector<vector<int> > *sum_xy, vector<vector<int> > *sum_boundary, vector<vector<double> > *sum_ave_keypoint);
 void saveFeaturePoint (int x, int y, vector<int> one_dimention_scanning, vector<int> word_list, int tmp_boundary, vector<vector<int> > *sum_one_dimention_scanning, vector<vector<int> > *sum_xy, vector<vector<int> > *sum_boundary, vector<vector<double> > *sum_ave_keypoint);
 void writeFeaturePoint(Mat template_img, vector<vector<int> > *sum_one_dimention_scanning, vector<vector<int> > *sum_xy, vector<vector<int> > *sum_boundary, vector<vector<double> > *sum_ave_keypoint);
 
 
 int main(int argc, char** argv){
   Mat template_img = imread(argv[1], CV_LOAD_IMAGE_COLOR);
+  Mat Gaussian_template;
   Mat template_hsv;
   Mat label_template_img;
   Mat dst_data;
   Mat clean_label_img;
+  Mat changed_label_img;
 
-
+  //コマンドライン引数
+  int patch_size;
+  if(argv[2] == NULL){
+    cout << "please set argv[2] about patch size. defalt is 7" <<endl;
+    patch_size = 7;
+  }else{
+    patch_size = atoi(argv[2]);
+    cout << "patch_size = "<<patch_size <<endl;
+  }
+  int tmp_range;
+  if(argv[3] == NULL){
+    cout << "please set argv[3] about tmp_range. defalt is 30" << endl;
+    tmp_range = 30;
+  }else{
+    tmp_range = atoi(argv[3]);
+    cout << "tmp_range = " << tmp_range << endl;
+  }
 
 //featureDetection variables
   vector<vector<int> > sum_one_dimention_scanning;
@@ -33,20 +53,30 @@ int main(int argc, char** argv){
   vector<vector<int> > sum_boundary;
   vector<vector<double> > sum_ave_keypoint;
 
-  cvtColor(template_img, template_hsv, CV_BGR2HSV);
+  //ガウシアンブラー
+  GaussianBlur(template_img, Gaussian_template, Size(5,5), 1.5, 1.5);
+  cvtColor(Gaussian_template, template_hsv, CV_BGR2HSV);
+  //cvtColor(template_img, template_hsv, CV_BGR2HSV);
 
-  label_template_img = template_splitRegion(template_hsv);
-  imwrite("label_template_img.jpg", label_template_img);
+
+
+  label_template_img = template_splitRegion(tmp_range, template_hsv);
+  //imwrite("label_template_img.jpg", label_template_img);
 
   dst_data = re_label(label_template_img);
-  imwrite("dst_data.jpg", dst_data);
+  //unsigned short画像の領域をunsigned charのランダムな値で埋める
+  //changed_label_img = writeDstData(dst_data);
 
-  clean_label_img = cleanLabelImage(dst_data);
-  imwrite("cleaned_dst_data.jpg", clean_label_img);
+  clean_label_img = cleanLabelImage(dst_data, patch_size);
   cout << "end label_img cleaning" << endl;
 
+  //unsigned short画像の領域をunsigned charのランダムな値で埋める
+  //ラベル画像確認用
+  changed_label_img = writeDstData(clean_label_img);
+  imwrite("changed_label_img.tiff", changed_label_img);
+
   cout << "feature detection" << endl;
-  featureDetection(clean_label_img, &sum_one_dimention_scanning, &sum_xy, &sum_boundary, &sum_ave_keypoint);
+  featureDetection(patch_size, clean_label_img, &sum_one_dimention_scanning, &sum_xy, &sum_boundary, &sum_ave_keypoint);
 /*
   cout << "===============================================================" << endl;
   for (int i = 0; i < sum_one_dimention_scanning.size(); i++){
@@ -76,12 +106,12 @@ int main(int argc, char** argv){
   return 0;
 }
 
-Mat template_splitRegion(Mat template_hsv){
+Mat template_splitRegion(int separate_range, Mat template_hsv){
   int template_x = template_hsv.cols;
   int template_y = template_hsv.rows;
   vector<Mat> planes;
   Mat v_value = Mat(template_y, template_x, CV_8UC1);
-  int v_count_list[256] = {0};
+  vector<int> v_count_list(256, 0);
 
   split(template_hsv, planes);
   v_value = planes[2];
@@ -92,13 +122,19 @@ Mat template_splitRegion(Mat template_hsv){
       v_count_list[v] += 1;
     }
   }
+  ofstream of_v_count("v_count_list.csv");
+  for(int i = 0; i < v_count_list.size(); i++){
+    of_v_count << v_count_list[i] << ",";
+  }
+  of_v_count << endl;
+  cout << "output v_count_list" <<endl;
 
-  float separation_list[256];
-  int tmp_range = 15;
+  vector<float> separation_list(256,0);
+  int tmp_range = separate_range;
   for(int i = 0; i < tmp_range; i++){
     separation_list[i] = 0;
   }
-  for(int i = 256 - tmp_range; i < sizeof(separation_list)/ sizeof(separation_list[0]); i++){
+  for(int i = 256 - tmp_range; i < separation_list.size(); i++){
     separation_list[i] = 0;
   }
 
@@ -112,7 +148,7 @@ Mat template_splitRegion(Mat template_hsv){
     float sum_o2_numerator = 0;
 
     //cout << "---------------calc start----------------------------" << endl;
-    for(int k = i - tmp_range; k < i+ tmp_range; k++){
+    for(int k = i - tmp_range; k < i + tmp_range; k++){
       if(k != i){
         sum_k += v_count_list[k];
       }
@@ -121,7 +157,7 @@ Mat template_splitRegion(Mat template_hsv){
         sum_j += v_count_list[j];
         sum_vj += v_count_list[j] * j;
     }
-    for(int l = i + 1; l < i+ tmp_range; l++){
+    for(int l = i + 1; l < i + tmp_range; l++){
         sum_l += v_count_list[l];
         sum_vl += v_count_list[l] * l;
     }
@@ -175,7 +211,8 @@ Mat template_splitRegion(Mat template_hsv){
       o2 = sum_o2_numerator / sum_l;
     }
 
-    float o12 = w1 * w2 * pow(u1 - u2, 2.0) + (w1 * o1 + w2 * o2);
+    float o12 = 0;
+    o12 = w1 * w2 * pow(u1 - u2, 2.0) + (w1 * o1 + w2 * o2);
 
     //cout << "o1 =  " << o1 << ", o2 = "<< o2 << ", o12 =" << o12 <<endl;
 
@@ -191,17 +228,28 @@ Mat template_splitRegion(Mat template_hsv){
     separation_list[i] = n;
   }
   cout << "separation_list" <<endl;
-  for(int i = 0; i < sizeof(separation_list) / sizeof(separation_list[0]); i++){
+  for(int i = 0; i < separation_list.size(); i++){
     cout << separation_list[i] << ", ";
   }
   cout << endl;
   cout << endl;
   cout << endl;
 
+  ofstream of_sep("separation_list.csv");
+  for(int i = 0; i < separation_list.size(); i++){
+    of_sep << separation_list[i] << ",";
+  }
+  of_sep << endl;
+  cout << "output separation_list" <<endl;
 
-  int label_list[256];
+
+  vector<int> label_list(256,0);
+  vector<float> tmp_sep_list;
+  vector<int> sep_index;
+  vector<int> sep_max_index;
   int b = 1;
   for(int a = 0 + 1; a < 256 - 1; a++){
+    /*
     label_list[a] = b;
     if(separation_list[a] > separation_list[a-1] &&
        separation_list[a] > separation_list[a+1] &&
@@ -209,17 +257,58 @@ Mat template_splitRegion(Mat template_hsv){
         b++;
         label_list[a] = b;
     }
+    */
+    if(separation_list[a] > 2/ M_PI){
+      tmp_sep_list.push_back(separation_list[a]);
+      sep_index.push_back(a);
+      if(separation_list[a+1] < 2/ M_PI){
+        //tmp_sep_listの中の最大値を分離点とする．
+        vector<float>::iterator max_tmp_sepIt = max_element(tmp_sep_list.begin(), tmp_sep_list.end());
+        size_t tmp_sep_maxIndex = distance(tmp_sep_list.begin(), max_tmp_sepIt);
+        sep_max_index.push_back(sep_index[tmp_sep_maxIndex]);
+
+        cout << "tmp_sep_list" << endl;
+        for(int i = 0; i < tmp_sep_list.size(); i++){
+          cout << tmp_sep_list[i] << ", ";
+        }
+        cout <<endl;
+        cout << "sep_max_index" << endl;
+        for(int i = 0; i < sep_max_index.size(); i++){
+          cout << sep_max_index[i] << ", ";
+        }
+        cout <<endl;
+        cout << endl;
+
+        tmp_sep_list.erase(tmp_sep_list.begin(), tmp_sep_list.end());
+        sep_index.erase(sep_index.begin(), sep_index.end());
+
+      }
+    }
   }
+  for(int i = 0; i < label_list.size(); i++){
+    for(int j = 0; j < sep_max_index.size(); j++){
+      label_list[i] = b;
+      if(i == sep_max_index[j]){
+        b ++;
+      }
+    }
+  }
+
   label_list[0] = label_list[1];
   label_list[255] = label_list[254];
 
   cout << "label_list" << endl;
-  for(int i = 0; i < sizeof(label_list)/ sizeof(label_list[0]); i++){
+  for(int i = 0; i < label_list.size(); i++){
     cout << label_list[i] << ", ";
   }
   cout << endl;
-  cout << endl;
-  cout << endl;
+
+  ofstream of_label("label_list.csv");
+  for(int i = 0; i < label_list.size(); i++){
+    of_label << label_list[i] << ",";
+  }
+  of_label << endl;
+  cout << "output label_list" <<endl;
 
   Mat label_template_img = Mat(template_y, template_x, CV_8UC1);
 
@@ -341,13 +430,13 @@ Mat re_label(Mat label_template_img){
       dst_data.at<unsigned short>(y,x) = label[tables];
     }
   }
-  ofstream ofs("dst_data.csv");
-  ofs << dst_data << endl;
+  //ofstream ofs("dst_data.csv");
+  //ofs << dst_data << endl;
 
   return dst_data;
 }
 
-Mat cleanLabelImage(Mat dst_data){
+Mat cleanLabelImage(Mat dst_data, int patch_size){
 
   int x_size = dst_data.cols;
   int y_size = dst_data.rows;
@@ -370,17 +459,17 @@ Mat cleanLabelImage(Mat dst_data){
   }
 
   //パッチサイズよりも小さい領域を0にする
-  for(int i = 0; i < label_list.size(); i++){
-    if(label_list[i] < 49){
-      for(int y = 0; y < y_size; y++){
-        for(int x = 0; x < x_size; x++){
-          if(dst_data.at<unsigned short>(y, x) == i){
-            dst_data.at<unsigned short>(y, x) = 0;
-          }
-        }
+  for(int y = 0; y < y_size; y++){
+    for(int x = 0; x < x_size; x++){
+      unsigned short dst_xy = dst_data.at<unsigned short>(y, x);
+      if (label_list[dst_xy] < patch_size/2 * patch_size/2 * M_PI){
+        dst_data.at<unsigned short>(y,x) = 0;
       }
     }
   }
+  Mat cleaned_dst_data;
+  cleaned_dst_data = writeDstData(dst_data);
+  imwrite("cleaned_dst_data.tiff" , cleaned_dst_data );
   //ofstream of_zero("dst_data_in_cleanLanelImage0.csv");
   //of_zero << dst_data << endl;
 
@@ -391,6 +480,8 @@ Mat cleanLabelImage(Mat dst_data){
     for(int x = 1; x < x_size; x++){
 
       if(dst_data.at<unsigned short>(y, x) == 0){
+        unsigned short dst_xy = dst_data.at<unsigned short>(y, x);
+        int tmp_dst_xy = tmp_dst_data.at<int>(y, x);
         unsigned short dst_up = dst_data.at<unsigned short>(y-1, x);
         unsigned short dst_left = dst_data.at<unsigned short>(y, x-1);
         int tmp_dst_up = tmp_dst_data.at<int>(y-1, x);
@@ -398,15 +489,15 @@ Mat cleanLabelImage(Mat dst_data){
 
         //上と左の画素を見て面積の大きい方をラベル画像に代入
         if(label_list[dst_up] >= label_list[dst_left]){
-          dst_data.at<unsigned short>(y, x) = dst_up;
+          dst_data.at<unsigned short>(y,x) = dst_up;
         }else{
-          dst_data.at<unsigned short>(y, x) = dst_left;
+          dst_data.at<unsigned short>(y,x) = dst_left;
         }
         //上と左の画素を見て値の小さい方に+1して代入
         if(tmp_dst_up >= tmp_dst_left){
-          tmp_dst_data.at<int>(y, x) = tmp_dst_left + 1;
+           tmp_dst_data.at<int>(y,x) = tmp_dst_left + 1;
         }else{
-          tmp_dst_data.at<int>(y, x) = tmp_dst_up + 1;
+          tmp_dst_data.at<int>(y,x) = tmp_dst_up + 1;
         }
       }
     }
@@ -420,26 +511,32 @@ Mat cleanLabelImage(Mat dst_data){
     for(int x = x_size - 2; x > 1; x--){
 
       if(tmp_dst_data.at<int>(y, x) > 0){
+        unsigned short dst_xy = dst_data.at<unsigned short>(y, x);
+        int tmp_dst_xy = tmp_dst_data.at<int>(y, x);
         unsigned short dst_down = dst_data.at<unsigned short>(y+1, x);
         unsigned short dst_right = dst_data.at<unsigned short>(y, x+1);
         int tmp_dst_down = tmp_dst_data.at<int>(y+1, x);
         int tmp_dst_right = tmp_dst_data.at<int>(y, x+1);
 
-        //距離画像に対して１回目のスキャンのときの値よりも小さい値を代入できる時
-        if(tmp_dst_data.at<int>(y, x) < tmp_dst_down + 1
-          || tmp_dst_data.at<int>(y, x) < tmp_dst_right + 1){
+        //距離画像に対して１回目のスキャンのときの値より大きい値を代入できる時
+        if(tmp_dst_xy > tmp_dst_down + 1
+          || tmp_dst_xy > tmp_dst_right + 1){
 
           //下と右の画素を見て面積の大きい方をラベル画像に代入
-          if(label_list[dst_down] >= label_list[dst_right]){
-            dst_data.at<unsigned short>(y, x) = dst_down;
-          }else{
-            dst_data.at<unsigned short>(y, x) = dst_right;
-          }
-          //下と右の画素を見て値の小さい方に+1して代入
-          if(tmp_dst_down >= tmp_dst_right){
-            tmp_dst_data.at<int>(y, x) = tmp_dst_right + 1;
-          }else{
-            tmp_dst_data.at<int>(y, x) = tmp_dst_down + 1;
+          if(label_list[dst_down] == label_list[dst_right]){//右と下が同じ時
+            if(label_list[dst_down] >= label_list[dst_right]){
+              dst_data.at<unsigned short>(y, x) = dst_down;
+            }else{
+              dst_data.at<unsigned short>(y, x) = dst_right;
+            }
+          }else{ //dst_dataに近い方のラベルを代入，tmp_dst_dataに下と右の画素を見て値の小さい方に+1して代入
+            if(tmp_dst_down >= tmp_dst_right){
+              dst_data.at<unsigned short>(y, x) = dst_right;
+              tmp_dst_data.at<int>(y, x) = tmp_dst_right + 1;
+            }else{
+              dst_data.at<unsigned short>(y, x) = dst_down;
+              tmp_dst_data.at<int>(y, x) = tmp_dst_down + 1;
+            }
           }
         }
       }
@@ -454,8 +551,43 @@ Mat cleanLabelImage(Mat dst_data){
   return dst_data;
 }
 
+Mat writeDstData(Mat clean_label_img){
+  int y_size = clean_label_img.rows;
+  int x_size = clean_label_img.cols;
+  Mat changed_label_img = Mat(y_size, x_size, CV_8UC1);
 
-void featureDetection(Mat label_template_img, vector<vector<int> > *sum_one_dimention_scanning, vector<vector<int> > *sum_xy, vector<vector<int> > *sum_boundary, vector<vector<double> > *sum_ave_keypoint){
+  double maxVal;
+  minMaxLoc(clean_label_img, NULL, &maxVal);
+
+  vector<unsigned short> label_list(maxVal, 0);
+  unsigned short label;
+
+
+  for(int y = 0; y < y_size; y++){
+    for(int x = 0; x < x_size; x++){
+      label = clean_label_img.at<unsigned short>(y, x);
+      label_list[label] += 1;
+    }
+  }
+
+  for(int i = 0; i < label_list.size(); i++){
+    int lucky = 1 + rand() % (256 - 1);
+    for(int y = 0; y < y_size; y++){
+      for(int x = 0; x < x_size; x++){
+        if(label_list[i] == 0){
+          break;
+          //cout << "zero exists!!!!!!!!!!!!!!!!" << endl;
+        }else{
+          if(clean_label_img.at<unsigned short>(y, x) == i){
+            changed_label_img.at<unsigned char>(y, x) = lucky;
+          }
+        }
+      }
+    }
+  }
+  return changed_label_img;
+}
+void featureDetection(int patch_size, Mat label_template_img, vector<vector<int> > *sum_one_dimention_scanning, vector<vector<int> > *sum_xy, vector<vector<int> > *sum_boundary, vector<vector<double> > *sum_ave_keypoint){
 
   vector<vector<int> > this_sum_one_dimention_scanning = *sum_one_dimention_scanning;
   vector<vector<int> > this_sum_xy = *sum_xy;
@@ -464,17 +596,17 @@ void featureDetection(Mat label_template_img, vector<vector<int> > *sum_one_dime
 
   int x_size = label_template_img.cols;
   int y_size = label_template_img.rows;
-  int n = 16;
+  int n = patch_size;
   int one_n = 16;
 
 
-  Mat scanning_filter = Mat(n, n, CV_8UC1);
+  Mat scanning_filter(n, n, CV_16U);
   int scan_x = scanning_filter.cols;
   int scan_y = scanning_filter.rows;
 
 
-  for(int y = 0; y < y_size - scan_y; y += 3){
-    for(int x = 0; x < x_size - scan_x; x += 3){
+  for(int y = 0; y < y_size - scan_y; y += patch_size/2){
+    for(int x = 0; x < x_size - scan_x; x += patch_size/2){
       for(int s_y = 0; s_y < scan_y; s_y++){
         for(int s_x = 0; s_x < scan_x; s_x++){
           scanning_filter.at<unsigned short>(s_y, s_x) = label_template_img.at<unsigned short>(s_y + y, s_x + x);
@@ -524,10 +656,10 @@ void featureDetection(Mat label_template_img, vector<vector<int> > *sum_one_dime
             //cnt_listの最小値のインデックス
             size_t cnt_minIndex = distance(cnt_list.begin(), min_cntIt);
 
-/*
+            /*
             cout << "-------------------one_d_lists----------------------" << endl;
-          cout << "scanning_center = " << scanning_center << endl;
-          cout << "word_list.size() = " << word_list.size() << endl;
+            cout << "scanning_center = " << scanning_center << endl;
+            cout << "word_list.size() = " << word_list.size() << endl;
             cout << "one_d_count = " << one_d_count <<endl;
             cout << "one_dimention_scanning = ";
             for (int a = 0; a < one_d_size; a++){
@@ -547,8 +679,7 @@ void featureDetection(Mat label_template_img, vector<vector<int> > *sum_one_dime
             cout << "min word_list = " << word_list[cnt_minIndex] << endl;
             cout << "one_dimention_scanning[0] = " << one_dimention_scanning[0] << endl;
             cout << "one_dimention_scanning[15] = " << one_dimention_scanning[15] << endl;
-*/
-
+            */
 
             //要素数が2,短い方のラベルが中心画素と同じ
             if(one_d_count == 1){
