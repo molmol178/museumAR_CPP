@@ -10,7 +10,12 @@
 using namespace std;
 using namespace cv;
 
-
+/*
+---------------------------------------------------------------------------------------------------
+ヒストグラム分割によるラベリング
+templateとinputで同じ領域で別れるようにする
+---------------------------------------------------------------------------------------------------
+*/
 Mat TopologyFeature::template_splitRegion(int separate_range, Mat template_hsv){
   int template_x = template_hsv.cols;
   int template_y = template_hsv.rows;
@@ -30,16 +35,8 @@ Mat TopologyFeature::template_splitRegion(int separate_range, Mat template_hsv){
     }
   }
 
-  ofstream of_v_count("template_img_out/template_v_count_list.csv");
-  for(int i = 0; i < v_count_list.size(); i++){
-    if(i == v_count_list.size() -1){
-      of_v_count << v_count_list[i];
-    }else{
-      of_v_count << v_count_list[i] << ",";
-    }
-  }
-  of_v_count << endl;
-  cout << "output template_v_count_list" <<endl;
+  string v_count_path = "template_img_out/template_v_count_list.csv";
+  oned_intCsvWriter(v_count_list, v_count_path);
 
   vector<float> separation_list(256,0);
   int tmp_range = separate_range;
@@ -139,20 +136,10 @@ Mat TopologyFeature::template_splitRegion(int separate_range, Mat template_hsv){
     //cout << "--------------------calc end-----------------------" << endl;
     separation_list[i] = n;
   }
-  cout << "separation_list" <<endl;
-  for(int i = 0; i < separation_list.size(); i++){
-    cout << separation_list[i] << ", ";
-  }
-  cout << endl;
-  cout << endl;
-  cout << endl;
 
-  ofstream of_sep("template_img_out/template_separation_list.csv");
-  for(int i = 0; i < separation_list.size(); i++){
-    of_sep << separation_list[i] << ",";
-  }
-  of_sep << endl;
-  cout << "output separation_list" <<endl;
+  string sep_path = "template_img_out/template_separation_list.csv";
+  oned_floatCsvWriter(separation_list, sep_path);
+
 
 
   vector<int> label_list(256,0);
@@ -215,16 +202,8 @@ Mat TopologyFeature::template_splitRegion(int separate_range, Mat template_hsv){
   }
   cout << endl;
 
-  ofstream of_label("template_img_out/label_list.csv");
-  for(int i = 0; i < label_list.size(); i++){
-    if(i == label_list.size() - 1){
-      of_label << label_list[i];
-    }else{
-      of_label << label_list[i] << ",";
-    }
-  }
-  of_label << endl;
-  cout << "output label_list" <<endl;
+  string label_path = "template_img_out/label_list.csv";
+  oned_intCsvWriter(label_list, label_path);
 
   Mat label_template_img = Mat(template_y, template_x, CV_8UC1);
 
@@ -235,6 +214,15 @@ Mat TopologyFeature::template_splitRegion(int separate_range, Mat template_hsv){
   }
   return label_template_img;
 }
+
+
+
+/*
+---------------------------------------------------------------------------------------------------
+再ラベリング
+１つの領域にユニークなラベル値が連番でつくようにする
+---------------------------------------------------------------------------------------------------
+*/
 
 Mat TopologyFeature::re_label(Mat label_template_img){
   int template_x = label_template_img.cols;
@@ -344,12 +332,132 @@ Mat TopologyFeature::re_label(Mat label_template_img){
       dst_data.at<unsigned short>(y,x) = label[tables];
     }
   }
-  //ofstream ofs("dst_data.csv");
-  //ofs << dst_data << endl;
+
+  return dst_data;
+}
+/*
+---------------------------------------------------------------------------------------------------
+再再ラベリング
+１つの領域にユニークなラベル値が連番でつくようにする
+---------------------------------------------------------------------------------------------------
+*/
+Mat TopologyFeature::rere_label(Mat label_template_img){
+  int template_x = label_template_img.cols;
+  int template_y = label_template_img.rows;
+
+  Mat dst_data = Mat(template_y, template_x, CV_8U);
+  int next_label = 1;
+  int area_template = template_y * template_x;
+  int table[area_template];
+
+  for (int i = 0; i < area_template; i++){
+    table[i] = i;
+  }
+
+  for (int y = 0; y < template_y; y++){
+    for (int x = 0; x < template_x; x++){
+      if (x == 0 && y == 0){
+        dst_data.at<unsigned char>(y,x) = next_label;
+        next_label++;
+        continue;
+      }
+      if (y == 0){
+        if (label_template_img.at<unsigned char>(y,x) == label_template_img.at<unsigned char>(y,x-1)){
+          dst_data.at<unsigned char>(y,x) = dst_data.at<unsigned char>(y, x-1);
+        }else{
+          dst_data.at<unsigned char>(y,x) = next_label;
+          next_label++;
+        }
+        continue;
+      }
+      if (x == 0){
+        if (label_template_img.at<unsigned char>(y,x) == label_template_img.at<unsigned char>(y-1,x)){
+          dst_data.at<unsigned char>(y,x) = dst_data.at<unsigned char>(y-1,x);
+        }else{
+          dst_data.at<unsigned char>(y,x) = next_label;
+          next_label++;
+        }
+        continue;
+      }
+
+      int s1 = label_template_img.at<unsigned char>(y,x-1);
+      int s2 = label_template_img.at<unsigned char>(y-1,x);
+
+      if (label_template_img.at<unsigned char>(y,x) == s2 &&
+          label_template_img.at<unsigned char>(y,x) == s1){
+
+        int ai = dst_data.at<unsigned char>(y,x-1);
+        int bi = dst_data.at<unsigned char>(y-1,x);
+
+        if (ai != bi){
+          int cnt = 1;
+          while(table[ai] != ai){
+            ai = table[ai];
+            cnt++;
+          }
+          while(table[bi] != bi){
+            bi = table[bi];
+          }
+          if (ai != bi){
+            table[bi] = ai;
+          }
+        }
+        if (ai < bi){
+          dst_data.at<unsigned char>(y,x) = ai;
+        }else{
+          dst_data.at<unsigned char>(y,x) = bi;
+        }
+        continue;
+      }
+
+      if (label_template_img.at<unsigned char>(y,x) == s2){
+        dst_data.at<unsigned char>(y,x) =  dst_data.at<unsigned char>(y-1,x);
+        continue;
+      }
+
+       if (label_template_img.at<unsigned char>(y,x) == s1){
+        dst_data.at<unsigned char>(y,x) =  dst_data.at<unsigned char>(y,x-1);
+        continue;
+      }
+
+      dst_data.at<unsigned char>(y,x) = next_label;
+      next_label++;
+    }
+  }
+  int index;
+  for (int ix = 0; ix < next_label; ix++){
+    index = ix;
+    while(table[index] != index){
+      index = table[index];
+    }
+    table[ix] = index;
+  }
+
+  int label[next_label];
+  index = 1;
+
+  for (int jx = 0; jx < next_label; jx++){
+    if (table[jx] == jx){
+      label[jx] = index;
+      index++;
+    }
+  }
+
+  for (int y = 0; y < template_y; y++){
+    for (int x = 0; x < template_x; x++){
+      int tables = table[dst_data.at<unsigned char>(y,x)];
+      dst_data.at<unsigned char>(y,x) = label[tables];
+    }
+  }
 
   return dst_data;
 }
 
+/*
+---------------------------------------------------------------------------------------------------
+パッチサイズよりも小さい領域を周りのラベル値で埋める
+---------------------------------------------------------------------------------------------------
+*/
 Mat TopologyFeature::cleanLabelImage(Mat dst_data, int patch_size){
 
   int x_size = dst_data.cols;
@@ -381,11 +489,9 @@ Mat TopologyFeature::cleanLabelImage(Mat dst_data, int patch_size){
       }
     }
   }
-  Mat cleaned_dst_data;
-  cleaned_dst_data = writeDstData(dst_data);
+  //Mat cleaned_dst_data;
+  //cleaned_dst_data = writeDstData(dst_data);
   //imwrite("cleaned_dst_data.tiff" , cleaned_dst_data );
-  //ofstream of_zero("dst_data_in_cleanLanelImage0.csv");
-  //of_zero << dst_data << endl;
 
 
 
@@ -416,9 +522,6 @@ Mat TopologyFeature::cleanLabelImage(Mat dst_data, int patch_size){
       }
     }
   }
-  //ofstream of_one("dst_data_in_cleanLanelImage1.csv");
-  //of_one << dst_data << endl;
-  //cout << dst_data << endl;
 
   //２回目のスキャン．右下から左上へ
   for(int y = y_size - 2; y > 1; y--){
@@ -456,12 +559,15 @@ Mat TopologyFeature::cleanLabelImage(Mat dst_data, int patch_size){
       }
     }
   }
-  //ofstream of_two("dst_data_in_cleanLanelImage2.csv");
-  //of_two << dst_data << endl;
   return dst_data;
 }
 
 
+/*
+---------------------------------------------------------------------------------------------------
+unsigned short型の画像にランダムな値を入れてunsigned charで書き出せるようにする
+---------------------------------------------------------------------------------------------------
+*/
 Mat TopologyFeature::writeDstData(Mat clean_label_img){
   int y_size = clean_label_img.rows;
   int x_size = clean_label_img.cols;
@@ -485,20 +591,21 @@ Mat TopologyFeature::writeDstData(Mat clean_label_img){
     int lucky = 1 + rand() % (256 - 1);
     for(int y = 0; y < y_size; y++){
       for(int x = 0; x < x_size; x++){
-        if(label_list[i] == 0){
-          break;
-          cout << "zero exists!!!!!!!!!!!!!!!!" << endl;
-        }else{
           if(clean_label_img.at<unsigned short>(y, x) == i){
             changed_label_img.at<unsigned char>(y, x) = lucky;
             //changed_label_img.at<unsigned char>(y, x) = i;
           }
-        }
       }
     }
   }
   return changed_label_img;
 }
+
+/*
+---------------------------------------------------------------------------------------------------
+トポロジの特徴を用いた特徴点検出
+---------------------------------------------------------------------------------------------------
+*/
 vector<vector<int> > TopologyFeature::featureDetection(int patch_size, Mat label_img, Mat changed_label_img, vector<vector<int> > *sum_label_one_dimention_scanning, vector<vector<int> > *sum_xy, vector<vector<int> > *sum_boundary, vector<vector<double> > *sum_ave_keypoint){
 //vector<vector<int> > TopologyFeature::featureDetection(int patch_size, Mat label_img, Mat changed_label_img, vector<vector<int> > *sum_one_dimention_scanning, vector<vector<int> > *sum_xy, vector<vector<int> > *sum_boundary, vector<vector<double> > *sum_ave_keypoint){
 
@@ -689,6 +796,11 @@ vector<vector<int> > TopologyFeature::featureDetection(int patch_size, Mat label
   return sum_min_label_word;
 }
 
+/*
+---------------------------------------------------------------------------------------------------
+検出した特徴点を保存する
+---------------------------------------------------------------------------------------------------
+*/
 vector<vector<int> > TopologyFeature::saveFeaturePoint (int x, int y,int min_label_word,vector<int> label_one_dimention_scanning,vector<int> word_list, int tmp_boundary, vector<vector<int> > *sum_label_one_dimention_scanning, vector<vector<int> > *sum_xy, vector<vector<int> > *sum_boundary, vector<vector<double> > *sum_ave_keypoint, vector<vector<int> > sum_min_label_word){
 //vector<vector<int> > TopologyFeature::saveFeaturePoint (int x, int y,int min_label_word,vector<int> one_dimention_scanning,vector<int> word_list, int tmp_boundary, vector<vector<int> > *sum_one_dimention_scanning, vector<vector<int> > *sum_xy, vector<vector<int> > *sum_boundary, vector<vector<double> > *sum_ave_keypoint, vector<vector<int> > sum_min_label_word){
 
@@ -741,7 +853,12 @@ vector<vector<int> > TopologyFeature::saveFeaturePoint (int x, int y,int min_lab
   return sum_min_label_word;
 }
 
-//カラー画像に特徴点をマッピング
+/*
+---------------------------------------------------------------------------------------------------
+検出した特徴点を画像上にマッピング
+---------------------------------------------------------------------------------------------------
+*/
+
 Mat TopologyFeature::writeFeaturePoint(Mat template_img, vector<vector<int> > *sum_xy, vector<vector<int> > *sum_boundary){
 
   vector<vector<int> > this_sum_xy = *sum_xy;
@@ -775,6 +892,12 @@ Mat TopologyFeature::writeFeaturePoint(Mat template_img, vector<vector<int> > *s
   //imwrite("detect_feature_point.jpg",template_img);
 }
 
+/*
+---------------------------------------------------------------------------------------------------
+検出した特徴点の特徴量を記述する
+画像上のラベルの内特徴点にはどのラベルがあるかでバイナリを作成
+---------------------------------------------------------------------------------------------------
+*/
 vector<vector<int> > TopologyFeature::featureDescription(vector<vector<int> > *sum_label_one_dimention_scanning, Mat label_img){
 //vector<vector<int> > TopologyFeature::featureDescription(vector<vector<int> > *sum_one_dimention_scanning, Mat label_img){
 
@@ -815,7 +938,13 @@ vector<vector<int> > TopologyFeature::featureDescription(vector<vector<int> > *s
 
 }
 
-
+/*
+---------------------------------------------------------------------------------------------------
+input画像用の関数
+templateのヒストグラムに合わせてinputのヒストグラムを偏差値処理
+templateのlabel_listを用いて，inputのラベル画像を作成
+---------------------------------------------------------------------------------------------------
+*/
 Mat TopologyFeature::inputCreateLabelImg(Mat input_hsv){
   int input_y = input_hsv.rows;
   int input_x = input_hsv.cols;
@@ -830,18 +959,9 @@ Mat TopologyFeature::inputCreateLabelImg(Mat input_hsv){
   //equalizeHist(input_v_value, input_v_value);
 
 
-  ifstream template_v_list("template_img_out/template_v_count_list.csv");
+  string template_v_list = "template_img_out/template_v_count_list.csv";
   vector<int> template_v_hist;
-  string buffer_v;
-  while(getline(template_v_list, buffer_v)){
-    vector<int> record_v;
-    istringstream stream(buffer_v);
-    string token;
-    while(getline(stream, token, ',')){
-      int tmp = stoi(token);
-      template_v_hist.push_back(tmp);
-    }
-  }
+  template_v_hist = oned_intCsvReader(template_v_list);
 
   for(int y = 0; y < input_y; y++ ){
     for (int x = 0; x < input_x; x++){
@@ -849,16 +969,8 @@ Mat TopologyFeature::inputCreateLabelImg(Mat input_hsv){
       input_v_hist[v] += 1;
     }
   }
-  ofstream of_v_count("input_img_out/input_v_count_list.csv");
-  for(int i = 0; i < input_v_hist.size(); i++){
-    if(i == input_v_hist.size() -1){
-      of_v_count << input_v_hist[i];
-    }else{
-      of_v_count << input_v_hist[i] << ",";
-    }
-  }
-  of_v_count << endl;
-  cout << "output input_v_hist" <<endl;
+  string input_v_count_path = "input_img_out/input_v_count_list.csv";
+  oned_intCsvWriter(input_v_hist, input_v_count_path);
 
 
 
@@ -921,32 +1033,15 @@ Mat TopologyFeature::inputCreateLabelImg(Mat input_hsv){
     }
   }
 
-  ofstream of_v_correct("input_img_out/correct_input_v_count_list.csv");
-  for(int i = 0; i < correct_input_v_hist.size(); i++){
-    if(i == correct_input_v_hist.size() -1){
-      of_v_correct << correct_input_v_hist[i];
-    }else{
-      of_v_correct << correct_input_v_hist[i] << ",";
-    }
-  }
-  of_v_correct << endl;
-  cout << "output correct_input_v_hist" <<endl;
+  string v_correct_path = "input_img_out/correct_input_v_count_list.csv";
+  oned_intCsvWriter(correct_input_v_hist, v_correct_path);
 
 
   Mat label_input_img = Mat(input_y, input_x, CV_8UC1);
 
-  ifstream template_label("template_img_out/label_list.csv");
+  string template_label_path = "template_img_out/label_list.csv";
   vector<int> template_labels;
-  string buffer_label;
-  while(getline(template_label, buffer_label)){
-    vector<int> record_label;
-    istringstream stream(buffer_label);
-    string token;
-    while(getline(stream, token, ',')){
-      int tmp = stoi(token);
-      template_labels.push_back(tmp);
-    }
-  }
+  template_labels = oned_intCsvReader(template_label_path);
 
   for(int iy = 0; iy < input_y; iy++){
     for(int ix = 0; ix < input_x; ix++){
@@ -957,81 +1052,37 @@ Mat TopologyFeature::inputCreateLabelImg(Mat input_hsv){
   return label_input_img;
 }
 
+/*
+---------------------------------------------------------------------------------------------------
+特徴点をマッチング
+結果画像を出力
+---------------------------------------------------------------------------------------------------
+*/
 void TopologyFeature::featureMatching(Mat input_img, Mat template_img, vector<vector<int> > keypoint_binary, vector<vector<int> > sum_label_one_dimention_scanning, vector<vector<int> > sum_xy, vector<vector<int> > sum_boundary, vector<vector<double> > sum_ave_keypoint, vector<vector<int> > sum_min_label_word){
 //void TopologyFeature::featureMatching(Mat input_img, Mat template_img, vector<vector<int> > keypoint_binary, vector<vector<int> > sum_one_dimention_scanning, vector<vector<int> > sum_xy, vector<vector<int> > sum_boundary, vector<vector<double> > sum_ave_keypoint, vector<vector<int> > sum_min_label_word){
 
 
 
 
-  ifstream binary("template_img_out/template_keypoint_binary.csv");
+  string template_binary_path = "template_img_out/template_keypoint_binary.csv";
   vector<vector<int> > template_binary;
-  string buffer_binary;
-  while(getline(binary, buffer_binary)){
-    vector<int> record_binary;
-    istringstream stream(buffer_binary);
-    string token;
-    while(getline(stream, token, ',')){
-      int tmp = stoi(token);
-      record_binary.push_back(tmp);
-    }
-    template_binary.push_back(record_binary);
-  }
+  template_binary = twod_intCsvReader(template_binary_path);
 
-  ifstream yx("template_img_out/template_yx.csv");
+  string  template_yx_path = "template_img_out/template_yx.csv";
   vector<vector<int> > template_yx;
-  string buffer_yx;
-  while(getline(yx, buffer_yx)){
-    vector<int> record_yx;
-    istringstream stream(buffer_yx);
-    string token;
-    while(getline(stream, token, ',')){
-      int tmp = stoi(token);
-      record_yx.push_back(tmp);
-    }
-    template_yx.push_back(record_yx);
-  }
+  template_yx = twod_intCsvReader(template_yx_path);
 
-  ifstream ave("template_img_out/template_sum_ave_keypoint.csv");
+  string template_ave_path = "template_img_out/template_sum_ave_keypoint.csv";
   vector<vector<double> > template_ave;
-  string buffer_ave;
-  while(getline(ave, buffer_ave)){
-    vector<double> record_ave;
-    istringstream stream(buffer_ave);
-    string token;
-    while(getline(stream, token, ',')){
-      double tmp = stof(token);
-      record_ave.push_back(tmp);
-    }
-    template_ave.push_back(record_ave);
-  }
+  template_ave = twod_doubleCsvReader(template_ave_path);
 
-  ifstream boundary("template_img_out/template_sum_boundary.csv");
+  string template_boundary_path = "template_img_out/template_sum_boundary.csv";
   vector<vector<int> > template_boundary;
-  string buffer_bou;
-  while(getline(boundary, buffer_bou)){
-    vector<int> record_bou;
-    istringstream stream(buffer_bou);
-    string token;
-    while(getline(stream, token, ',')){
-      int tmp = stof(token);
-      record_bou.push_back(tmp);
-    }
-    template_boundary.push_back(record_bou);
-  }
+  template_boundary = twod_intCsvReader(template_boundary_path);
 
-  ifstream min_label("template_img_out/template_sum_min_label_word.csv");
+  string template_min_label_path = "template_img_out/template_sum_min_label_word.csv";
   vector<vector<int> > template_min_label;
-  string buffer_min;
-  while(getline(min_label, buffer_min)){
-    vector<int> record_min;
-    istringstream stream(buffer_min);
-    string token;
-    while(getline(stream, token, ',')){
-      int tmp = stoi(token);
-      record_min.push_back(tmp);
-    }
-    template_min_label.push_back(record_min);
-  }
+  template_min_label = twod_intCsvReader(template_min_label_path);
 
   int input_y = input_img.rows;
   int input_x = input_img.cols;
@@ -1098,6 +1149,12 @@ void TopologyFeature::featureMatching(Mat input_img, Mat template_img, vector<ve
   imwrite("input_img_out/sum_img.tiff", sum_img);
 }
 
+
+/*
+---------------------------------------------------------------------------------------------------
+出力されたcsvをいい感じに描画
+---------------------------------------------------------------------------------------------------
+*/
 int TopologyFeature::graphPlot(){
 
 /*
@@ -1157,4 +1214,151 @@ int TopologyFeature::graphPlot(){
   pclose(fp);
   cout << "plotting ..." << endl;
   return 0;
+}
+
+/*
+---------------------------------------------------------------------------------------------------
+csvを読み込み(一次元のint型配列)
+---------------------------------------------------------------------------------------------------
+*/
+vector<int> TopologyFeature::oned_intCsvReader(string filePath){
+  ifstream file(filePath);
+  vector<int> readCsv;
+  string buffer;
+  while(getline(file, buffer)){
+    vector<int> record;
+    istringstream stream(buffer);
+    string token;
+    while(getline(stream, token, ',')){
+      int tmp = stoi(token);
+      readCsv.push_back(tmp);
+    }
+  }
+  return readCsv;
+}
+
+/*
+---------------------------------------------------------------------------------------------------
+csvを読み込み(二次元のint型配列)
+---------------------------------------------------------------------------------------------------
+*/
+vector<vector<int> > TopologyFeature::twod_intCsvReader(string filePath){
+
+  ifstream file(filePath);
+  vector<vector<int> > readcsv;
+  string buffer;
+  while(getline(file, buffer)){
+    vector<int> record;
+    istringstream stream(buffer);
+    string token;
+    while(getline(stream, token, ',')){
+      int tmp = stoi(token);
+      record.push_back(tmp);
+    }
+    readcsv.push_back(record);
+  }
+  return readcsv;
+}
+
+/*
+---------------------------------------------------------------------------------------------------
+csvを読み込み(二次元のdouble型配列)
+---------------------------------------------------------------------------------------------------
+*/
+vector<vector<double> > TopologyFeature::twod_doubleCsvReader(string filePath){
+
+  ifstream file(filePath);
+  vector<vector<double> > readcsv;
+  string buffer;
+  while(getline(file, buffer)){
+    vector<double> record;
+    istringstream stream(buffer);
+    string token;
+    while(getline(stream, token, ',')){
+      double tmp = stoi(token);
+      record.push_back(tmp);
+    }
+    readcsv.push_back(record);
+  }
+  return readcsv;
+}
+
+
+/*
+---------------------------------------------------------------------------------------------------
+csvを書き込み(一次元のint型配列)
+---------------------------------------------------------------------------------------------------
+*/
+void TopologyFeature::oned_intCsvWriter(vector<int> file, string filePath){
+  ofstream ofs(filePath);
+  for(int i = 0; i < file.size(); i++){
+    if(i == file.size() -1){
+      ofs << file[i];
+    }else{
+      ofs << file[i] << ",";
+    }
+  }
+  ofs << endl;
+
+}
+
+/*
+---------------------------------------------------------------------------------------------------
+csvを書き込み(一次元のfloat型配列)
+---------------------------------------------------------------------------------------------------
+*/
+void TopologyFeature::oned_floatCsvWriter(vector<float> file, string filePath){
+
+  ofstream ofs(filePath);
+  for(int i = 0; i < file.size(); i++){
+    if(i == file.size() -1){
+      ofs << file[i];
+    }else{
+      ofs << file[i] << ",";
+    }
+  }
+  ofs << endl;
+
+}
+
+/*
+---------------------------------------------------------------------------------------------------
+csvを書き込み(二次元のint型配列)
+---------------------------------------------------------------------------------------------------
+*/
+void TopologyFeature::twod_intCsvWriter(vector<vector<int> > file, string filePath){
+
+  ofstream ofs(filePath);
+  for(int i = 0; i < file.size(); i++){
+    for(int j = 0; j < file[0].size(); j ++){
+      if(j == file[0].size()-1){
+        ofs << file[i][j];
+      }else{
+        ofs << file[i][j] << ",";
+      }
+    }
+    ofs << endl;
+  }
+  ofs << endl;
+}
+
+/*
+---------------------------------------------------------------------------------------------------
+csvを書き込み(二次元のdouble型配列)
+---------------------------------------------------------------------------------------------------
+*/
+void TopologyFeature::twod_doubleCsvWriter(vector<vector<double> > file, string filePath){
+
+  ofstream ofs(filePath);
+  for(int i = 0; i < file.size(); i++){
+    for(int j = 0; j < file[0].size(); j ++){
+      if(j == file[0].size()-1){
+        ofs << file[i][j];
+      }else{
+        ofs << file[i][j] << ",";
+      }
+    }
+    ofs << endl;
+  }
+  ofs << endl;
 }

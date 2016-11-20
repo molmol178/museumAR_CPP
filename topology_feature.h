@@ -13,6 +13,7 @@ class TopologyFeature{
   public:
     Mat template_splitRegion(int tmp_range, Mat template_hsv);
     Mat re_label(Mat label_template_img);
+    Mat rere_label(Mat label_template_img);
     Mat cleanLabelImage(Mat dst_data, int patch_size);
 
     Mat writeDstData(Mat clean_label_img);
@@ -32,7 +33,14 @@ class TopologyFeature{
     void featureMatching(Mat input_img, Mat template_img, vector<vector<int> > keypoint_binary, vector<vector<int> > sum_label_one_dimention_scanning, vector<vector<int> > sum_xy, vector<vector<int> > sum_boundary, vector<vector<double> > sum_ave_keypoint, vector<vector<int> > sum_min_label_word);
     //void featureMatching(Mat input_img, Mat template_img, vector<vector<int> > keypoint_binary, vector<vector<int> > sum_one_dimention_scanning, vector<vector<int> > sum_xy, vector<vector<int> > sum_boundary, vector<vector<double> > sum_ave_keypoint, vector<vector<int> > sum_min_label_word);
 
+    vector<int> oned_intCsvReader(string filePath);
+    vector<vector<int> > twod_intCsvReader(string filePath);
+    vector<vector<double> > twod_doubleCsvReader(string filePath);
 
+    void oned_intCsvWriter(vector<int> file, string filePath);
+    void oned_floatCsvWriter(vector<float> file, string filePath);
+    void twod_intCsvWriter(vector<vector<int> > file, string filePath);
+    void twod_doubleCsvWriter(vector<vector<double> > file, string filePath);
 
     int graphPlot();
 };
