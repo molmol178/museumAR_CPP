@@ -38,6 +38,12 @@ Mat TopologyFeature::template_splitRegion(int separate_range, Mat template_hsv){
   string v_count_path = "template_img_out/template_v_count_list.csv";
   oned_intCsvWriter(v_count_list, v_count_path);
 
+  //for gnuplot
+  string v_path = "graphPlot/template_v_count_list.csv";
+  oned_vertical_intCsvWriter(v_count_list, v_path);
+
+
+
   vector<float> separation_list(256,0);
   int tmp_range = separate_range;
   for(int i = 0; i < tmp_range; i++){
@@ -140,6 +146,12 @@ Mat TopologyFeature::template_splitRegion(int separate_range, Mat template_hsv){
   string sep_path = "template_img_out/template_separation_list.csv";
   oned_floatCsvWriter(separation_list, sep_path);
 
+  //for gnuplot
+  string sep_vertical_path = "graphPlot/template_separation_list.csv";
+  oned_vertical_floatCsvWriter(separation_list, sep_vertical_path);
+
+
+
 
 
   vector<int> label_list(256,0);
@@ -204,6 +216,12 @@ Mat TopologyFeature::template_splitRegion(int separate_range, Mat template_hsv){
 
   string label_path = "template_img_out/label_list.csv";
   oned_intCsvWriter(label_list, label_path);
+
+  //for gnuplot
+  string label_vertical_path = "graphPlot/label_list.csv";
+  oned_vertical_intCsvWriter(label_list, label_vertical_path);
+
+
 
   Mat label_template_img = Mat(template_y, template_x, CV_8UC1);
 
@@ -345,6 +363,7 @@ Mat TopologyFeature::rere_label(Mat label_template_img){
   int template_x = label_template_img.cols;
   int template_y = label_template_img.rows;
 
+  Mat tmp_dst_data = Mat(template_y, template_x, CV_16U);
   Mat dst_data = Mat(template_y, template_x, CV_8U);
   int next_label = 1;
   int area_template = template_y * template_x;
@@ -363,18 +382,18 @@ Mat TopologyFeature::rere_label(Mat label_template_img){
       }
       if (y == 0){
         if (label_template_img.at<unsigned char>(y,x) == label_template_img.at<unsigned char>(y,x-1)){
-          dst_data.at<unsigned char>(y,x) = dst_data.at<unsigned char>(y, x-1);
+          tmp_dst_data.at<unsigned short>(y,x) = tmp_dst_data.at<unsigned short>(y, x-1);
         }else{
-          dst_data.at<unsigned char>(y,x) = next_label;
+          tmp_dst_data.at<unsigned short>(y,x) = next_label;
           next_label++;
         }
         continue;
       }
       if (x == 0){
         if (label_template_img.at<unsigned char>(y,x) == label_template_img.at<unsigned char>(y-1,x)){
-          dst_data.at<unsigned char>(y,x) = dst_data.at<unsigned char>(y-1,x);
+          tmp_dst_data.at<unsigned short>(y,x) = tmp_dst_data.at<unsigned short>(y-1,x);
         }else{
-          dst_data.at<unsigned char>(y,x) = next_label;
+          tmp_dst_data.at<unsigned short>(y,x) = next_label;
           next_label++;
         }
         continue;
@@ -386,8 +405,8 @@ Mat TopologyFeature::rere_label(Mat label_template_img){
       if (label_template_img.at<unsigned char>(y,x) == s2 &&
           label_template_img.at<unsigned char>(y,x) == s1){
 
-        int ai = dst_data.at<unsigned char>(y,x-1);
-        int bi = dst_data.at<unsigned char>(y-1,x);
+        int ai = tmp_dst_data.at<unsigned short>(y,x-1);
+        int bi = tmp_dst_data.at<unsigned short>(y-1,x);
 
         if (ai != bi){
           int cnt = 1;
@@ -403,24 +422,24 @@ Mat TopologyFeature::rere_label(Mat label_template_img){
           }
         }
         if (ai < bi){
-          dst_data.at<unsigned char>(y,x) = ai;
+          tmp_dst_data.at<unsigned short>(y,x) = ai;
         }else{
-          dst_data.at<unsigned char>(y,x) = bi;
+          tmp_dst_data.at<unsigned short>(y,x) = bi;
         }
         continue;
       }
 
       if (label_template_img.at<unsigned char>(y,x) == s2){
-        dst_data.at<unsigned char>(y,x) =  dst_data.at<unsigned char>(y-1,x);
+        tmp_dst_data.at<unsigned short>(y,x) =  tmp_dst_data.at<unsigned short>(y-1,x);
         continue;
       }
 
        if (label_template_img.at<unsigned char>(y,x) == s1){
-        dst_data.at<unsigned char>(y,x) =  dst_data.at<unsigned char>(y,x-1);
+        tmp_dst_data.at<unsigned short>(y,x) =  tmp_dst_data.at<unsigned short>(y,x-1);
         continue;
       }
 
-      dst_data.at<unsigned char>(y,x) = next_label;
+      tmp_dst_data.at<unsigned short>(y,x) = next_label;
       next_label++;
     }
   }
@@ -445,7 +464,7 @@ Mat TopologyFeature::rere_label(Mat label_template_img){
 
   for (int y = 0; y < template_y; y++){
     for (int x = 0; x < template_x; x++){
-      int tables = table[dst_data.at<unsigned char>(y,x)];
+      int tables = table[tmp_dst_data.at<unsigned short>(y,x)];
       dst_data.at<unsigned char>(y,x) = label[tables];
     }
   }
@@ -483,7 +502,7 @@ Mat TopologyFeature::cleanLabelImage(Mat dst_data, int patch_size){
   //パッチサイズよりも小さい領域を0にする
   for(int y = 0; y < y_size; y++){
     for(int x = 0; x < x_size; x++){
-      int dst_xy = dst_data.at<unsigned short>(y, x);
+    int dst_xy = dst_data.at<unsigned short>(y, x);
       if (label_list[dst_xy] < patch_size/2 * patch_size/2 * M_PI){
         dst_data.at<unsigned short>(y,x) = 0;
       }
@@ -972,6 +991,11 @@ Mat TopologyFeature::inputCreateLabelImg(Mat input_hsv){
   string input_v_count_path = "input_img_out/input_v_count_list.csv";
   oned_intCsvWriter(input_v_hist, input_v_count_path);
 
+  //for gnuplot
+  string input_v_path = "graphPlot/input_v_count_list.csv";
+  oned_vertical_intCsvWriter(input_v_hist, input_v_path);
+
+
 
 
   float sum_t = 0;
@@ -1035,6 +1059,12 @@ Mat TopologyFeature::inputCreateLabelImg(Mat input_hsv){
 
   string v_correct_path = "input_img_out/correct_input_v_count_list.csv";
   oned_intCsvWriter(correct_input_v_hist, v_correct_path);
+
+  //for gnuplot
+  string v_correct_vertical_path = "graphPlot/correct_input_v_count_list.csv";
+  oned_vertical_intCsvWriter(correct_input_v_hist, v_correct_vertical_path);
+
+
 
 
   Mat label_input_img = Mat(input_y, input_x, CV_8UC1);
@@ -1157,61 +1187,42 @@ void TopologyFeature::featureMatching(Mat input_img, Mat template_img, vector<ve
 */
 int TopologyFeature::graphPlot(){
 
-/*
-  ifstream template_v_list("template_img_out/template_v_count_list.csv");
-  vector<int> template_v_hist;
-  string buffer_v;
-  while(getline(template_v_list, buffer_v)){
-    vector<int> record_v;
-    istringstream stream(buffer_v);
-    string token;
-    while(getline(stream, token, ',')){
-      int tmp = stoi(token);
-      template_v_hist.push_back(tmp);
-    }
-  }
-  //csvの縦横変換
-  ofstream ofs_key_bin("graphPlot/rotated_template_v_hist.csv");
-  for(int i = 0; i < ke.size(); i++){
-    for(int j = 0; j < keypoint_binary[0].size(); j ++){
-      if(j == keypoint_binary[0].size() - 1){
-        ofs_key_bin << keypoint_binary[i][j];
-      }else{
-        ofs_key_bin << keypoint_binary[i][j] << ",";
-      }
-    }
-    ofs_key_bin << endl;
-  }
-  ofs_key_bin << endl;
-
-  vector<vector<int> > rotated_template_v_hist;
-  vector<int> temp;
-  cout << template_v_hist.size() << endl;
-  cout << template_v_hist[255] << endl;
-  for (int w = 0; w < template_v_hist.size(); w++ ) {
-    temp.push_back(template_v_hist[w]);
-    rotated_template_v_hist.push_back(temp);
-    cout << "test" << endl;
-  }
-  for (int i = 0; i < template_v_hist.size(); i++){
-      cout << template_v_hist[i] << ", ";
-    cout << endl;
-  }
-*/
-
-
   FILE *fp = popen("gnuplot", "w");
   if (fp == NULL)
   return -1;
   fputs("set datafile separator ','\n", fp);
   fputs("set xrange [0:256]\n", fp);
-  fputs("set yrange [0:500]\n", fp);
+  fputs("set yrange [0:30000]\n", fp);
+  fputs("set y2range [0:10]\n", fp);
   fputs("set terminal png\n", fp);
-  fputs("set style fill solid border lc rgb 'red'\n", fp);
-  fputs("set output '/Users/mol/Development/museum_ar_cpp/graphPlot/test.png'\n", fp);
-  fputs("plot 'template_img_out/template_v_count_list.csv' \n", fp);
+  fputs("set ytics nomirror\n", fp);
+  fputs("set y2tics\n", fp);
+  fputs("set grid\n", fp);
+  fputs("set title 'separability of template img'\n", fp);
+  fputs("set ylabel 'histgram'\n", fp);
+  fputs("set key top left\n", fp);
+  //fputs("set style fill solid border lc rgb 'red'\n", fp);
+  fputs("set output '/Users/mol/Development/museum_ar_cpp/graphPlot/template_separability.png'\n", fp);
+  fputs("plot 'graphPlot/template_v_count_list.csv' with boxes title 'histgram', 'graphPlot/template_separation_list.csv' with lines title 'separability * 10' axes x1y2,  'graphPlot/label_list.csv' with lines title 'label list' axes x1y2 ,20/pi with lines title '2 / pi' axes x1y2 \n", fp);
   fflush(fp);
   pclose(fp);
+
+  FILE *fp2 = popen("gnuplot", "w");
+  if (fp2 == NULL)
+  return -1;
+  fputs("set datafile separator ','\n", fp2);
+  fputs("set xrange [0:256]\n", fp2);
+  fputs("set yrange [0:30000]\n", fp2);
+  fputs("set terminal png\n", fp2);
+  fputs("set grid\n", fp2);
+  fputs("set ylabel 'histgram'\n", fp2);
+  fputs("set key top left\n", fp2);
+  fputs("set title 'histgram of template, input, correct input'\n", fp);
+  fputs("set style fill solid border lc rgb 'red'\n", fp2);
+  fputs("set output '/Users/mol/Development/museum_ar_cpp/graphPlot/input_histgrams.png'\n", fp2);
+  fputs("plot 'graphPlot/template_v_count_list.csv' with lines title 'template histgram', 'graphPlot/input_v_count_list.csv' with lines title 'input histgram', 'graphPlot/correct_input_v_count_list.csv' with lines title 'corrected input histgram' linecolor rgbcolor 'red' \n", fp2);
+  fflush(fp2);
+  pclose(fp2);
   cout << "plotting ..." << endl;
   return 0;
 }
@@ -1320,6 +1331,39 @@ void TopologyFeature::oned_floatCsvWriter(vector<float> file, string filePath){
   ofs << endl;
 
 }
+/*
+---------------------------------------------------------------------------------------------------
+csvを書き込み(一次元のint型配列)
+縦書き
+---------------------------------------------------------------------------------------------------
+*/
+void TopologyFeature::oned_vertical_intCsvWriter(vector<int> file, string filePath){
+  ofstream ofs(filePath);
+  for(int i = 0; i < file.size(); i++){
+      ofs << file[i];
+      ofs << endl;
+  }
+}
+
+/*
+---------------------------------------------------------------------------------------------------
+csvを書き込み(一次元のfloat型配列)
+縦書き
+---------------------------------------------------------------------------------------------------
+*/
+void TopologyFeature::oned_vertical_floatCsvWriter(vector<float> file, string filePath){
+
+  ofstream ofs(filePath);
+  float larger;
+  for(int i = 0; i < file.size(); i++){
+      larger = file[i] *10;
+      ofs << larger;
+      ofs << endl;
+  }
+
+}
+
+
 
 /*
 ---------------------------------------------------------------------------------------------------

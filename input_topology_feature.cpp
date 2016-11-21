@@ -24,6 +24,7 @@ int main(int argc, char** argv){
   Mat changed_label_img;
   Mat input_img;
   Mat template_img;
+  Mat last_label_img;
 
 
 
@@ -37,14 +38,14 @@ int main(int argc, char** argv){
     patch_size = 7;
     cout << "patch_size = "<<patch_size <<endl;
     cout << "please set argv[4] about tmp_range. defalt is 30" << endl;
-    tmp_range = 30;
+    tmp_range = 40;
   }else if(argc == 4){
     input_img = imread(argv[1], CV_LOAD_IMAGE_COLOR);
     template_img = imread(argv[2], CV_LOAD_IMAGE_COLOR);
     patch_size = atoi(argv[3]);
     cout << "patch_size = "<< patch_size <<endl;
     cout << "please set argv[4] about tmp_range. defalt is 30" << endl;
-    tmp_range = 30;
+    tmp_range = 40;
   }else if(argc == 5){
     input_img = imread(argv[1], CV_LOAD_IMAGE_COLOR);
     template_img = imread(argv[2], CV_LOAD_IMAGE_COLOR);
@@ -69,7 +70,10 @@ int main(int argc, char** argv){
 
 
   GaussianBlur(input_img, Gaussian_input, Size(7, 7), 1.5, 1.5);
-  cvtColor(Gaussian_input, input_hsv, CV_BGR2HSV);
+  //cvtColor(Gaussian_input, input_hsv, CV_BGR2HSV);
+  cvtColor(Gaussian_input, input_hsv, CV_BGR2RGB);
+
+
 
   label_input_img = tf.inputCreateLabelImg(input_hsv);
   //label_input_img = tf.template_splitRegion(tmp_range, input_hsv);
@@ -86,6 +90,9 @@ int main(int argc, char** argv){
   //ラベル画像確認用
   changed_label_img = tf.writeDstData(clean_label_img);
   imwrite("input_img_out/changed_label_img_input.tiff", changed_label_img);
+
+  //last_label_img = tf.rere_label(changed_label_img);
+  //imwrite("input_img_out/last_label_img.tiff", last_label_img);
 
   cout << "end label_img cleaning" << endl;
 
@@ -151,6 +158,6 @@ int main(int argc, char** argv){
   tf.featureMatching(input_img, template_img, keypoint_binary, sum_label_one_dimention_scanning, sum_xy, sum_boundary, sum_ave_keypoint, sum_min_label_word);
   //tf.featureMatching(input_img, template_img, keypoint_binary, sum_one_dimention_scanning, sum_xy, sum_boundary, sum_ave_keypoint, sum_min_label_word);
 
-  //tf.graphPlot();
+  tf.graphPlot();
   return 0;
 }

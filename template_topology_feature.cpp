@@ -19,7 +19,7 @@ int main(int argc, char** argv){
   Mat clean_label_img;
   Mat changed_label_img;
   Mat template_img;
-  Mat test_dst_data;
+  Mat last_label_img;
 
 
 
@@ -31,7 +31,7 @@ int main(int argc, char** argv){
     patch_size = atoi(argv[2]);
     cout << "patch_size = "<<patch_size <<endl;
     cout << "please set argv[3] about tmp_range. defalt is 30" << endl;
-    tmp_range = 30;
+    tmp_range = 40;
   }else if(argc == 4){
     template_img = imread(argv[1], CV_LOAD_IMAGE_COLOR);
     patch_size = atoi(argv[2]);
@@ -46,7 +46,7 @@ int main(int argc, char** argv){
     cout << "please set argv[2] about patch size. defalt is 7" <<endl;
     patch_size = 7;
     cout << "please set argv[3] about tmp_range. defalt is 30" << endl;
-    tmp_range = 30;
+    tmp_range = 40;
   }
 
 //featureDetection variables
@@ -60,9 +60,12 @@ int main(int argc, char** argv){
   vector<vector<int> > sum_min_label_word;
 
   GaussianBlur(template_img, Gaussian_template, Size(7,7), 1.5, 1.5);
-  cvtColor(Gaussian_template, template_hsv, CV_BGR2HSV);
+  //cvtColor(Gaussian_template, template_hsv, CV_BGR2HSV);
+  cvtColor(Gaussian_template, template_hsv, CV_BGR2RGB);
+
 
   label_template_img = tf.template_splitRegion(tmp_range, template_hsv);
+
   imwrite("template_img_out/label_template_img.tiff", label_template_img);
 
   dst_data = tf.re_label(label_template_img);
@@ -72,12 +75,11 @@ int main(int argc, char** argv){
   imwrite("template_img_out/clean_label_img.tiff", clean_label_img);
   imwrite("template_img_out/changed_label_img.tiff", changed_label_img);
 
-  //re_labelでtest_dst_dataを出力すると綺麗にcsvが掛けるが画像は出力されない
-  test_dst_data = tf.rere_label(changed_label_img);
-  imwrite("template_img_out/test_img.tiff", test_dst_data);
+  //last_label_img = tf.rere_label(changed_label_img);
+  //imwrite("template_img_out/last_label_img.tiff", last_label_img);
 
-  ofstream ofs("template_img_out/test_img.csv");
-  ofs << test_dst_data;
+  //ofstream ofs("template_img_out/test_img.csv");
+  //ofs << test_dst_data;
 
 
   cout << "end label_img cleaning" << endl;

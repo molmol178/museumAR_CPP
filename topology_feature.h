@@ -39,6 +39,10 @@ class TopologyFeature{
 
     void oned_intCsvWriter(vector<int> file, string filePath);
     void oned_floatCsvWriter(vector<float> file, string filePath);
+
+    void oned_vertical_intCsvWriter(vector<int> file, string filePath);
+    void oned_vertical_floatCsvWriter(vector<float> file, string filePath);
+
     void twod_intCsvWriter(vector<vector<int> > file, string filePath);
     void twod_doubleCsvWriter(vector<vector<double> > file, string filePath);
 
