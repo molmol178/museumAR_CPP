@@ -1191,6 +1191,7 @@ int TopologyFeature::graphPlot(){
   if (fp == NULL)
   return -1;
   fputs("set datafile separator ','\n", fp);
+  fputs("set terminal pdf\n", fp);
   fputs("set xrange [0:256]\n", fp);
   fputs("set yrange [0:30000]\n", fp);
   fputs("set y2range [0:10]\n", fp);
@@ -1202,8 +1203,11 @@ int TopologyFeature::graphPlot(){
   fputs("set ylabel 'histgram'\n", fp);
   fputs("set key top left\n", fp);
   //fputs("set style fill solid border lc rgb 'red'\n", fp);
+  fputs("set output '/Users/mol/Development/museum_ar_cpp/graphPlot/template_separability.pdf'\n", fp);
+  fputs("plot 'graphPlot/template_v_count_list.csv' with boxes title 'histgram', 'graphPlot/template_separation_list.csv' with lines title 'separability * 10' axes x1y2,  'graphPlot/label_list.csv' with lines title 'label list' axes x1y2 ,20/pi with lines title '2 / pi * 10' axes x1y2 \n", fp);
   fputs("set output '/Users/mol/Development/museum_ar_cpp/graphPlot/template_separability.png'\n", fp);
-  fputs("plot 'graphPlot/template_v_count_list.csv' with boxes title 'histgram', 'graphPlot/template_separation_list.csv' with lines title 'separability * 10' axes x1y2,  'graphPlot/label_list.csv' with lines title 'label list' axes x1y2 ,20/pi with lines title '2 / pi' axes x1y2 \n", fp);
+  fputs("plot 'graphPlot/template_v_count_list.csv' with boxes title 'histgram', 'graphPlot/template_separation_list.csv' with lines title 'separability * 10' axes x1y2,  'graphPlot/label_list.csv' with lines title 'label list' axes x1y2 ,20/pi with lines title '2 / pi * 10' axes x1y2 \n", fp);
+ 
   fflush(fp);
   pclose(fp);
 
@@ -1211,6 +1215,7 @@ int TopologyFeature::graphPlot(){
   if (fp2 == NULL)
   return -1;
   fputs("set datafile separator ','\n", fp2);
+  fputs("set terminal pdf\n", fp);
   fputs("set xrange [0:256]\n", fp2);
   fputs("set yrange [0:30000]\n", fp2);
   fputs("set terminal png\n", fp2);
@@ -1219,8 +1224,11 @@ int TopologyFeature::graphPlot(){
   fputs("set key top left\n", fp2);
   fputs("set title 'histgram of template, input, correct input'\n", fp);
   fputs("set style fill solid border lc rgb 'red'\n", fp2);
+  fputs("set output '/Users/mol/Development/museum_ar_cpp/graphPlot/input_histgrams.pdf'\n", fp2);
+  fputs("plot 'graphPlot/template_v_count_list.csv' with lines title 'template histgram', 'graphPlot/input_v_count_list.csv' with lines title 'input histgram', 'graphPlot/correct_input_v_count_list.csv' with lines title 'corrected input histgram' linecolor rgbcolor 'red' \n", fp2);
   fputs("set output '/Users/mol/Development/museum_ar_cpp/graphPlot/input_histgrams.png'\n", fp2);
   fputs("plot 'graphPlot/template_v_count_list.csv' with lines title 'template histgram', 'graphPlot/input_v_count_list.csv' with lines title 'input histgram', 'graphPlot/correct_input_v_count_list.csv' with lines title 'corrected input histgram' linecolor rgbcolor 'red' \n", fp2);
+ 
   fflush(fp2);
   pclose(fp2);
   cout << "plotting ..." << endl;
