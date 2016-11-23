@@ -58,6 +58,7 @@ int main(int argc, char** argv){
 
   vector<vector<int> > keypoint_binary;
   vector<vector<int> > sum_min_label_word;
+  vector<vector<int> > sum_mean_vector;
 
   GaussianBlur(template_img, Gaussian_template, Size(7,7), 1.5, 1.5);
   //cvtColor(Gaussian_template, template_hsv, CV_BGR2HSV);
@@ -74,9 +75,6 @@ int main(int argc, char** argv){
   changed_label_img = tf.writeDstData(clean_label_img);
   imwrite("template_img_out/clean_label_img.tiff", clean_label_img);
   imwrite("template_img_out/changed_label_img.tiff", changed_label_img);
-
-  //last_label_img = tf.rere_label(changed_label_img);
-  //imwrite("template_img_out/last_label_img.tiff", last_label_img);
 
   //ofstream ofs("template_img_out/test_img.csv");
   //ofs << test_dst_data;
@@ -112,7 +110,7 @@ int main(int argc, char** argv){
 
 
   cout << "feature detection" << endl;
-  sum_min_label_word = tf.featureDetection(patch_size, label_template_img,clean_label_img, &sum_label_one_dimention_scanning, &sum_xy, &sum_boundary, &sum_ave_keypoint);
+  sum_min_label_word = tf.featureDetection(patch_size, label_template_img,clean_label_img, &sum_label_one_dimention_scanning, &sum_xy, &sum_boundary, &sum_ave_keypoint, &sum_mean_vector);
   //sum_min_label_word = tf.featureDetection(patch_size, label_template_img,clean_label_img, &sum_one_dimention_scanning, &sum_xy, &sum_boundary, &sum_ave_keypoint);
 
   /*
@@ -161,6 +159,8 @@ int main(int argc, char** argv){
   string sum_min_path = "template_img_out/template_sum_min_label_word.csv";
   tf.twod_intCsvWriter(sum_min_label_word, sum_min_path);
 
+  string sum_mean_vector_path = "template_img_out/template_sum_mean_vector.csv";
+  tf.twod_intCsvWriter(sum_mean_vector, sum_mean_vector_path);
 
   template_img = tf.writeFeaturePoint(template_img, &sum_xy, &sum_boundary);
   imwrite("template_img_out/template_detect_feature_point.tiff", template_img);

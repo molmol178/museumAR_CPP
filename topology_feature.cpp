@@ -353,124 +353,7 @@ Mat TopologyFeature::re_label(Mat label_template_img){
 
   return dst_data;
 }
-/*
----------------------------------------------------------------------------------------------------
-再再ラベリング
-１つの領域にユニークなラベル値が連番でつくようにする
----------------------------------------------------------------------------------------------------
-*/
-Mat TopologyFeature::rere_label(Mat label_template_img){
-  int template_x = label_template_img.cols;
-  int template_y = label_template_img.rows;
 
-  Mat tmp_dst_data = Mat(template_y, template_x, CV_16U);
-  Mat dst_data = Mat(template_y, template_x, CV_8U);
-  int next_label = 1;
-  int area_template = template_y * template_x;
-  int table[area_template];
-
-  for (int i = 0; i < area_template; i++){
-    table[i] = i;
-  }
-
-  for (int y = 0; y < template_y; y++){
-    for (int x = 0; x < template_x; x++){
-      if (x == 0 && y == 0){
-        dst_data.at<unsigned char>(y,x) = next_label;
-        next_label++;
-        continue;
-      }
-      if (y == 0){
-        if (label_template_img.at<unsigned char>(y,x) == label_template_img.at<unsigned char>(y,x-1)){
-          tmp_dst_data.at<unsigned short>(y,x) = tmp_dst_data.at<unsigned short>(y, x-1);
-        }else{
-          tmp_dst_data.at<unsigned short>(y,x) = next_label;
-          next_label++;
-        }
-        continue;
-      }
-      if (x == 0){
-        if (label_template_img.at<unsigned char>(y,x) == label_template_img.at<unsigned char>(y-1,x)){
-          tmp_dst_data.at<unsigned short>(y,x) = tmp_dst_data.at<unsigned short>(y-1,x);
-        }else{
-          tmp_dst_data.at<unsigned short>(y,x) = next_label;
-          next_label++;
-        }
-        continue;
-      }
-
-      int s1 = label_template_img.at<unsigned char>(y,x-1);
-      int s2 = label_template_img.at<unsigned char>(y-1,x);
-
-      if (label_template_img.at<unsigned char>(y,x) == s2 &&
-          label_template_img.at<unsigned char>(y,x) == s1){
-
-        int ai = tmp_dst_data.at<unsigned short>(y,x-1);
-        int bi = tmp_dst_data.at<unsigned short>(y-1,x);
-
-        if (ai != bi){
-          int cnt = 1;
-          while(table[ai] != ai){
-            ai = table[ai];
-            cnt++;
-          }
-          while(table[bi] != bi){
-            bi = table[bi];
-          }
-          if (ai != bi){
-            table[bi] = ai;
-          }
-        }
-        if (ai < bi){
-          tmp_dst_data.at<unsigned short>(y,x) = ai;
-        }else{
-          tmp_dst_data.at<unsigned short>(y,x) = bi;
-        }
-        continue;
-      }
-
-      if (label_template_img.at<unsigned char>(y,x) == s2){
-        tmp_dst_data.at<unsigned short>(y,x) =  tmp_dst_data.at<unsigned short>(y-1,x);
-        continue;
-      }
-
-       if (label_template_img.at<unsigned char>(y,x) == s1){
-        tmp_dst_data.at<unsigned short>(y,x) =  tmp_dst_data.at<unsigned short>(y,x-1);
-        continue;
-      }
-
-      tmp_dst_data.at<unsigned short>(y,x) = next_label;
-      next_label++;
-    }
-  }
-  int index;
-  for (int ix = 0; ix < next_label; ix++){
-    index = ix;
-    while(table[index] != index){
-      index = table[index];
-    }
-    table[ix] = index;
-  }
-
-  int label[next_label];
-  index = 1;
-
-  for (int jx = 0; jx < next_label; jx++){
-    if (table[jx] == jx){
-      label[jx] = index;
-      index++;
-    }
-  }
-
-  for (int y = 0; y < template_y; y++){
-    for (int x = 0; x < template_x; x++){
-      int tables = table[tmp_dst_data.at<unsigned short>(y,x)];
-      dst_data.at<unsigned char>(y,x) = label[tables];
-    }
-  }
-
-  return dst_data;
-}
 
 /*
 ---------------------------------------------------------------------------------------------------
@@ -498,6 +381,7 @@ Mat TopologyFeature::cleanLabelImage(Mat dst_data, int patch_size){
       label_list[label] += 1;
     }
   }
+
 
   //パッチサイズよりも小さい領域を0にする
   for(int y = 0; y < y_size; y++){
@@ -578,6 +462,8 @@ Mat TopologyFeature::cleanLabelImage(Mat dst_data, int patch_size){
       }
     }
   }
+
+  cout << "testtesttest" << endl;
   return dst_data;
 }
 
@@ -625,14 +511,15 @@ Mat TopologyFeature::writeDstData(Mat clean_label_img){
 トポロジの特徴を用いた特徴点検出
 ---------------------------------------------------------------------------------------------------
 */
-vector<vector<int> > TopologyFeature::featureDetection(int patch_size, Mat label_img, Mat changed_label_img, vector<vector<int> > *sum_label_one_dimention_scanning, vector<vector<int> > *sum_xy, vector<vector<int> > *sum_boundary, vector<vector<double> > *sum_ave_keypoint){
-//vector<vector<int> > TopologyFeature::featureDetection(int patch_size, Mat label_img, Mat changed_label_img, vector<vector<int> > *sum_one_dimention_scanning, vector<vector<int> > *sum_xy, vector<vector<int> > *sum_boundary, vector<vector<double> > *sum_ave_keypoint){
+vector<vector<int> > TopologyFeature::featureDetection(int patch_size, Mat label_img, Mat changed_label_img, vector<vector<int> > *sum_label_one_dimention_scanning, vector<vector<int> > *sum_xy, vector<vector<int> > *sum_boundary, vector<vector<double> > *sum_ave_keypoint, vector<vector<int> > *sum_mean_vector){
+//vector<vector<int> > TopologyFeature::featureDetection(int patch_size, Mat label_img, Mat changed_label_img, vector<vector<int> > *sum_one_dimention_scanning, vector<vector<int> > *sum_xy, vector<vector<int> > *sum_boundary, vector<vector<double> > *sum_ave_keypoint, vector<vector<int> > *sum_mean_vector){
 
   vector<vector<int> > this_sum_label_one_dimention_scanning = *sum_label_one_dimention_scanning;
   //vector<vector<int> > this_sum_one_dimention_scanning = *sum_one_dimention_scanning;
   vector<vector<int> > this_sum_xy = *sum_xy;
   vector<vector<int> > this_sum_boundary = *sum_boundary;
   vector<vector<double> > this_sum_ave_keypoint = *sum_ave_keypoint;
+  vector<vector<int> > this_sum_mean_vector = *sum_mean_vector;
 
   int x_size = changed_label_img.cols;
   int y_size = changed_label_img.rows;
@@ -767,7 +654,7 @@ vector<vector<int> > TopologyFeature::featureDetection(int patch_size, Mat label
                   int min_label_word = label_word_list[label_cnt_minIndex];
                   sum_min_label_word = saveFeaturePoint(x, y, min_label_word, label_one_dimention_scanning, label_word_list, tmp_boundary, &this_sum_label_one_dimention_scanning, &this_sum_xy, &this_sum_boundary, &this_sum_ave_keypoint, sum_min_label_word);
                   //sum_min_label_word = saveFeaturePoint(x, y, min_label_word, one_dimention_scanning, label_word_list, tmp_boundary, &this_sum_one_dimention_scanning, &this_sum_xy, &this_sum_boundary, &this_sum_ave_keypoint, sum_min_label_word);
-
+                  calcMeanVector(x, y, min_label_word, label_one_dimention_scanning, &this_sum_mean_vector);
                 }
               }
             }
@@ -777,6 +664,7 @@ vector<vector<int> > TopologyFeature::featureDetection(int patch_size, Mat label
                 int min_label_word = label_word_list[label_cnt_minIndex];
                 sum_min_label_word = saveFeaturePoint(x, y, min_label_word,label_one_dimention_scanning,label_word_list, tmp_boundary, &this_sum_label_one_dimention_scanning, &this_sum_xy, &this_sum_boundary, &this_sum_ave_keypoint, sum_min_label_word);
                 //sum_min_label_word = saveFeaturePoint(x, y, min_label_word, one_dimention_scanning, label_word_list, tmp_boundary, &this_sum_one_dimention_scanning, &this_sum_xy, &this_sum_boundary, &this_sum_ave_keypoint, sum_min_label_word);
+                calcMeanVector(x, y, min_label_word, label_one_dimention_scanning, &this_sum_mean_vector);
 
                 }
               //patch_sizeによって変わる
@@ -787,7 +675,7 @@ vector<vector<int> > TopologyFeature::featureDetection(int patch_size, Mat label
                 int min_label_word = label_word_list[label_cnt_minIndex];
                 sum_min_label_word = saveFeaturePoint(x, y, min_label_word,label_one_dimention_scanning,label_word_list, tmp_boundary, &this_sum_label_one_dimention_scanning, &this_sum_xy, &this_sum_boundary, &this_sum_ave_keypoint, sum_min_label_word);
                 //sum_min_label_word = saveFeaturePoint(x, y, min_label_word, one_dimention_scanning, label_word_list, tmp_boundary, &this_sum_one_dimention_scanning, &this_sum_xy, &this_sum_boundary, &this_sum_ave_keypoint, sum_min_label_word);
-
+                calcMeanVector(x, y, min_label_word, label_one_dimention_scanning, &this_sum_mean_vector);
                 }
               }
           }
@@ -799,7 +687,7 @@ vector<vector<int> > TopologyFeature::featureDetection(int patch_size, Mat label
                 int min_label_word = label_word_list[label_cnt_minIndex];
                 sum_min_label_word = saveFeaturePoint(x, y, min_label_word,label_one_dimention_scanning,label_word_list, tmp_boundary, &this_sum_label_one_dimention_scanning, &this_sum_xy, &this_sum_boundary, &this_sum_ave_keypoint, sum_min_label_word);
                 //sum_min_label_word = saveFeaturePoint(x, y, min_label_word, one_dimention_scanning, label_word_list, tmp_boundary, &this_sum_one_dimention_scanning, &this_sum_xy, &this_sum_boundary, &this_sum_ave_keypoint, sum_min_label_word);
-
+                calcMeanVector(x, y, min_label_word, label_one_dimention_scanning, &this_sum_mean_vector);
               }
            }
         }
@@ -812,7 +700,187 @@ vector<vector<int> > TopologyFeature::featureDetection(int patch_size, Mat label
   *sum_xy = this_sum_xy;
   *sum_boundary = this_sum_boundary;
   *sum_ave_keypoint = this_sum_ave_keypoint;
+  *sum_mean_vector = this_sum_mean_vector;
   return sum_min_label_word;
+}
+
+/*
+---------------------------------------------------------------------------------------------------
+検出した特徴点の小さい方のラベルがキーポイントの中心に対して作る平均ベクトルを求める．
+---------------------------------------------------------------------------------------------------
+*/
+void TopologyFeature::calcMeanVector(int x, int y, int min_label_word, vector<int> label_one_dimention_scanning, vector<vector<int> > *sum_mean_vector){
+
+/*
+  scanning_label_filter.at<unsigned char>(0,3),
+  scanning_label_filter.at<unsigned char>(0,4),
+  scanning_label_filter.at<unsigned char>(1,5),
+  scanning_label_filter.at<unsigned char>(2,6),
+  scanning_label_filter.at<unsigned char>(3,6),
+  scanning_label_filter.at<unsigned char>(4,6),
+  scanning_label_filter.at<unsigned char>(5,5),
+  scanning_label_filter.at<unsigned char>(6,4),
+  scanning_label_filter.at<unsigned char>(6,3),
+  scanning_label_filter.at<unsigned char>(6,2),
+  scanning_label_filter.at<unsigned char>(5,1),
+  scanning_label_filter.at<unsigned char>(4,0),
+  scanning_label_filter.at<unsigned char>(3,0),
+  scanning_label_filter.at<unsigned char>(2,0),
+  scanning_label_filter.at<unsigned char>(1,1),
+  scanning_label_filter.at<unsigned char>(0,2)};
+*/
+
+  vector<vector<int> > sum_min_label_coordinate;
+  vector<int> tmp_min_label_coordinate;
+
+  //cout << endl << endl;
+  //cout << "--------------------------------------------------------------------" << endl;
+  //cout<< "min label word = " << min_label_word << endl;
+
+  for(int i = 0; i < label_one_dimention_scanning.size(); i++){
+    //cout << "label_one_dimention_scanning" << endl;
+    //cout << label_one_dimention_scanning[i] << ", " << endl;
+    //cout << "x = " << x << "y = " << y <<endl;
+    //cout << "i = " << i << endl;
+
+    //cout << "tmp_min_label_coordinate" <<endl;
+    //for(int j = 0; j < tmp_min_label_coordinate.size(); j++){
+    //  cout << tmp_min_label_coordinate[j] << ", ";
+    //}
+    //cout << endl;
+    if(min_label_word ==  label_one_dimention_scanning[i]){
+      if(i == 0){
+        tmp_min_label_coordinate.push_back(y+0);
+        tmp_min_label_coordinate.push_back(x+3);
+        sum_min_label_coordinate.push_back(tmp_min_label_coordinate);
+        tmp_min_label_coordinate.erase(tmp_min_label_coordinate.begin(), tmp_min_label_coordinate.end());
+      }
+      else if(i == 1){
+        tmp_min_label_coordinate.push_back(y+0);
+        tmp_min_label_coordinate.push_back(x+4);
+        sum_min_label_coordinate.push_back(tmp_min_label_coordinate);
+        tmp_min_label_coordinate.erase(tmp_min_label_coordinate.begin(), tmp_min_label_coordinate.end());
+      }
+      else if(i == 2){
+        tmp_min_label_coordinate.push_back(y+1);
+        tmp_min_label_coordinate.push_back(x+5);
+        sum_min_label_coordinate.push_back(tmp_min_label_coordinate);
+        tmp_min_label_coordinate.erase(tmp_min_label_coordinate.begin(), tmp_min_label_coordinate.end());
+      }
+      else if(i == 3){
+        tmp_min_label_coordinate.push_back(y+2);
+        tmp_min_label_coordinate.push_back(x+6);
+        sum_min_label_coordinate.push_back(tmp_min_label_coordinate);
+        tmp_min_label_coordinate.erase(tmp_min_label_coordinate.begin(), tmp_min_label_coordinate.end());
+      }
+      else if(i == 4){
+        tmp_min_label_coordinate.push_back(y+3);
+        tmp_min_label_coordinate.push_back(x+6);
+        sum_min_label_coordinate.push_back(tmp_min_label_coordinate);
+        tmp_min_label_coordinate.erase(tmp_min_label_coordinate.begin(), tmp_min_label_coordinate.end());
+      }
+      else if(i == 5){
+        tmp_min_label_coordinate.push_back(y+4);
+        tmp_min_label_coordinate.push_back(x+6);
+        sum_min_label_coordinate.push_back(tmp_min_label_coordinate);
+        tmp_min_label_coordinate.erase(tmp_min_label_coordinate.begin(), tmp_min_label_coordinate.end());
+      }
+      else if(i == 6){
+        tmp_min_label_coordinate.push_back(y+5);
+        tmp_min_label_coordinate.push_back(x+5);
+        sum_min_label_coordinate.push_back(tmp_min_label_coordinate);
+        tmp_min_label_coordinate.erase(tmp_min_label_coordinate.begin(), tmp_min_label_coordinate.end());
+      }
+      else if(i == 7){
+        tmp_min_label_coordinate.push_back(y+6);
+        tmp_min_label_coordinate.push_back(x+4);
+        sum_min_label_coordinate.push_back(tmp_min_label_coordinate);
+        tmp_min_label_coordinate.erase(tmp_min_label_coordinate.begin(), tmp_min_label_coordinate.end());
+      }
+      else if(i == 8){
+        tmp_min_label_coordinate.push_back(y+6);
+        tmp_min_label_coordinate.push_back(x+3);
+        sum_min_label_coordinate.push_back(tmp_min_label_coordinate);
+        tmp_min_label_coordinate.erase(tmp_min_label_coordinate.begin(), tmp_min_label_coordinate.end());
+      }
+      else if(i == 9){
+        tmp_min_label_coordinate.push_back(y+6);
+        tmp_min_label_coordinate.push_back(x+2);
+        sum_min_label_coordinate.push_back(tmp_min_label_coordinate);
+        tmp_min_label_coordinate.erase(tmp_min_label_coordinate.begin(), tmp_min_label_coordinate.end());
+      }
+      else if(i == 10){
+        tmp_min_label_coordinate.push_back(y+5);
+        tmp_min_label_coordinate.push_back(x+1);
+        sum_min_label_coordinate.push_back(tmp_min_label_coordinate);
+        tmp_min_label_coordinate.erase(tmp_min_label_coordinate.begin(), tmp_min_label_coordinate.end());
+      }
+      else if(i == 11){
+        tmp_min_label_coordinate.push_back(y+4);
+        tmp_min_label_coordinate.push_back(x+0);
+        sum_min_label_coordinate.push_back(tmp_min_label_coordinate);
+        tmp_min_label_coordinate.erase(tmp_min_label_coordinate.begin(), tmp_min_label_coordinate.end());
+      }
+      else if(i == 12){
+        tmp_min_label_coordinate.push_back(y+3);
+        tmp_min_label_coordinate.push_back(x+0);
+        sum_min_label_coordinate.push_back(tmp_min_label_coordinate);
+        tmp_min_label_coordinate.erase(tmp_min_label_coordinate.begin(), tmp_min_label_coordinate.end());
+      }
+      else if(i == 13){
+        tmp_min_label_coordinate.push_back(y+2);
+        tmp_min_label_coordinate.push_back(x+0);
+        sum_min_label_coordinate.push_back(tmp_min_label_coordinate);
+        tmp_min_label_coordinate.erase(tmp_min_label_coordinate.begin(), tmp_min_label_coordinate.end());
+      }
+      else if(i == 14){
+        tmp_min_label_coordinate.push_back(y+1);
+        tmp_min_label_coordinate.push_back(x+1);
+        sum_min_label_coordinate.push_back(tmp_min_label_coordinate);
+        tmp_min_label_coordinate.erase(tmp_min_label_coordinate.begin(), tmp_min_label_coordinate.end());
+      }
+      else if(i == 15){
+        tmp_min_label_coordinate.push_back(y+0);
+        tmp_min_label_coordinate.push_back(x+2);
+        sum_min_label_coordinate.push_back(tmp_min_label_coordinate);
+        tmp_min_label_coordinate.erase(tmp_min_label_coordinate.begin(), tmp_min_label_coordinate.end());
+      }
+    }
+  }
+  cout << "calc vector=========================================================" << endl;;
+  cout << "sum_min_label_coordinate" << endl;
+  for(int i = 0; i < sum_min_label_coordinate.size(); i++){
+    for(int j = 0; j < sum_min_label_coordinate[i].size(); j++){
+      cout << sum_min_label_coordinate[i][j] << ", " ;
+    }
+    cout << endl;
+  }
+  //calc mean vector
+  int sum_y_vector = 0;
+  int sum_x_vector = 0;
+  int cnt_vector = 0;
+  for(int j = 0; j < sum_min_label_coordinate.size(); j ++){
+    int y_vector = sum_min_label_coordinate[j][0] - y;
+    int x_vector = sum_min_label_coordinate[j][1] - x;
+    sum_y_vector += y_vector;
+    sum_x_vector += x_vector;
+    cnt_vector ++;
+  }
+  vector<vector<int> > mean_vector = *sum_mean_vector;
+  vector<int> tmp_mean_vector;
+  tmp_mean_vector.push_back(sum_y_vector / cnt_vector);
+  tmp_mean_vector.push_back(sum_x_vector / cnt_vector);
+  mean_vector.push_back(tmp_mean_vector);
+
+  cout << "sum_mean_vector" << endl;
+  for(int i = 0; i < mean_vector.size(); i++){
+    for(int j = 0; j < mean_vector[0].size(); j++){
+      cout << mean_vector[i][j] << ", " ;
+    }
+    cout << endl;
+  }
+  //return
+  *sum_mean_vector = mean_vector;
 }
 
 /*
@@ -977,7 +1045,6 @@ Mat TopologyFeature::inputCreateLabelImg(Mat input_hsv){
 
   //equalizeHist(input_v_value, input_v_value);
 
-
   string template_v_list = "template_img_out/template_v_count_list.csv";
   vector<int> template_v_hist;
   template_v_hist = oned_intCsvReader(template_v_list);
@@ -994,9 +1061,6 @@ Mat TopologyFeature::inputCreateLabelImg(Mat input_hsv){
   //for gnuplot
   string input_v_path = "graphPlot/input_v_count_list.csv";
   oned_vertical_intCsvWriter(input_v_hist, input_v_path);
-
-
-
 
   float sum_t = 0;
   float sum_i = 0;
@@ -1064,9 +1128,6 @@ Mat TopologyFeature::inputCreateLabelImg(Mat input_hsv){
   string v_correct_vertical_path = "graphPlot/correct_input_v_count_list.csv";
   oned_vertical_intCsvWriter(correct_input_v_hist, v_correct_vertical_path);
 
-
-
-
   Mat label_input_img = Mat(input_y, input_x, CV_8UC1);
 
   string template_label_path = "template_img_out/label_list.csv";
@@ -1088,7 +1149,7 @@ Mat TopologyFeature::inputCreateLabelImg(Mat input_hsv){
 結果画像を出力
 ---------------------------------------------------------------------------------------------------
 */
-void TopologyFeature::featureMatching(Mat input_img, Mat template_img, vector<vector<int> > keypoint_binary, vector<vector<int> > sum_label_one_dimention_scanning, vector<vector<int> > sum_xy, vector<vector<int> > sum_boundary, vector<vector<double> > sum_ave_keypoint, vector<vector<int> > sum_min_label_word){
+void TopologyFeature::featureMatching(Mat input_img, Mat template_img, vector<vector<int> > keypoint_binary, vector<vector<int> > sum_label_one_dimention_scanning, vector<vector<int> > sum_xy, vector<vector<int> > sum_boundary, vector<vector<double> > sum_ave_keypoint, vector<vector<int> > sum_min_label_word, vector<vector<int> > sum_mean_vector){
 //void TopologyFeature::featureMatching(Mat input_img, Mat template_img, vector<vector<int> > keypoint_binary, vector<vector<int> > sum_one_dimention_scanning, vector<vector<int> > sum_xy, vector<vector<int> > sum_boundary, vector<vector<double> > sum_ave_keypoint, vector<vector<int> > sum_min_label_word){
 
 
@@ -1114,6 +1175,10 @@ void TopologyFeature::featureMatching(Mat input_img, Mat template_img, vector<ve
   vector<vector<int> > template_min_label;
   template_min_label = twod_intCsvReader(template_min_label_path);
 
+  string template_mean_vector_path = "template_img_out/template_sum_mean_vector.csv";
+  vector<vector<int> > template_mean_vector;
+  template_mean_vector = twod_intCsvReader(template_mean_vector_path);
+
   int input_y = input_img.rows;
   int input_x = input_img.cols;
 
@@ -1126,6 +1191,7 @@ void TopologyFeature::featureMatching(Mat input_img, Mat template_img, vector<ve
   double calc_ave = 0;
   int calc_boundary = 0;
   int calc_min_label = 0;
+  double calc_simi_vector = 0.0;
 
   for(int i = 0; i < template_binary.size()-1; i++){
     for(int j = 0; j< keypoint_binary.size(); j++){
@@ -1138,12 +1204,13 @@ void TopologyFeature::featureMatching(Mat input_img, Mat template_img, vector<ve
       calc_ave = template_ave[i][0] - sum_ave_keypoint[j][0];
       calc_boundary = template_boundary[i][0] - sum_boundary[j][0];
       calc_min_label = template_min_label[i][0] - sum_min_label_word[j][0];
+      calc_simi_vector = (template_mean_vector[i][0] * sum_mean_vector[j][0] + template_mean_vector[i][1] * sum_mean_vector[j][1]) / (sqrt(pow(template_mean_vector[i][0],2.0) + pow(template_mean_vector[i][1], 2.0)) * sqrt(pow(sum_mean_vector[j][0], 2.0) + pow(sum_mean_vector[j][1], 2.0)));
 
       //cout << "calc_min_label = " << calc_min_label << endl;
 
       //if(h == 0 && calc_ave == 0 && boundary == 0 && calc_min_label == 0){
       //if(boundary == 0 && calc_min_label == 0){
-      if(h == 0 && calc_min_label == 0){
+      if(h == 0 && calc_min_label == 0 && calc_simi_vector > 0.7){
         //第一象限
         //if(sum_xy[j][1] < input_x / 2 && sum_xy[j][0] < input_y / 2 && template_yx[i][1] < template_x / 2 && template_yx[i][0] < template_y / 2){
         circle(sum_img, Point(input_x + template_yx[i][1], template_yx[i][0]), 2, Scalar(200,0,255), 1, 4);
