@@ -61,8 +61,8 @@ int main(int argc, char** argv){
   vector<vector<int> > sum_mean_vector;
 
   GaussianBlur(template_img, Gaussian_template, Size(7,7), 1.5, 1.5);
-  //cvtColor(Gaussian_template, template_hsv, CV_BGR2HSV);
-  cvtColor(Gaussian_template, template_hsv, CV_BGR2RGB);
+  cvtColor(Gaussian_template, template_hsv, CV_BGR2HSV);
+  //cvtColor(Gaussian_template, template_hsv, CV_BGR2RGB);
 
 
   label_template_img = tf.template_splitRegion(tmp_range, template_hsv);

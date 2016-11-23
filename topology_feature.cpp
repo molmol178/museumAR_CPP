@@ -354,7 +354,6 @@ Mat TopologyFeature::re_label(Mat label_template_img){
   return dst_data;
 }
 
-
 /*
 ---------------------------------------------------------------------------------------------------
 パッチサイズよりも小さい領域を周りのラベル値で埋める
@@ -462,8 +461,6 @@ Mat TopologyFeature::cleanLabelImage(Mat dst_data, int patch_size){
       }
     }
   }
-
-  cout << "testtesttest" << endl;
   return dst_data;
 }
 
@@ -847,6 +844,7 @@ void TopologyFeature::calcMeanVector(int x, int y, int min_label_word, vector<in
       }
     }
   }
+  /*
   cout << "calc vector=========================================================" << endl;;
   cout << "sum_min_label_coordinate" << endl;
   for(int i = 0; i < sum_min_label_coordinate.size(); i++){
@@ -855,6 +853,7 @@ void TopologyFeature::calcMeanVector(int x, int y, int min_label_word, vector<in
     }
     cout << endl;
   }
+  */
   //calc mean vector
   int sum_y_vector = 0;
   int sum_x_vector = 0;
@@ -871,7 +870,7 @@ void TopologyFeature::calcMeanVector(int x, int y, int min_label_word, vector<in
   tmp_mean_vector.push_back(sum_y_vector / cnt_vector);
   tmp_mean_vector.push_back(sum_x_vector / cnt_vector);
   mean_vector.push_back(tmp_mean_vector);
-
+  /*
   cout << "sum_mean_vector" << endl;
   for(int i = 0; i < mean_vector.size(); i++){
     for(int j = 0; j < mean_vector[0].size(); j++){
@@ -879,6 +878,7 @@ void TopologyFeature::calcMeanVector(int x, int y, int min_label_word, vector<in
     }
     cout << endl;
   }
+  */
   //return
   *sum_mean_vector = mean_vector;
 }
@@ -1210,7 +1210,8 @@ void TopologyFeature::featureMatching(Mat input_img, Mat template_img, vector<ve
 
       //if(h == 0 && calc_ave == 0 && boundary == 0 && calc_min_label == 0){
       //if(boundary == 0 && calc_min_label == 0){
-      if(h == 0 && calc_min_label == 0 && calc_simi_vector > 0.7){
+        cout << "calc_simi_vector = " << calc_simi_vector << endl;
+      if(h == 0 && calc_min_label == 0 && calc_simi_vector == 1){
         //第一象限
         //if(sum_xy[j][1] < input_x / 2 && sum_xy[j][0] < input_y / 2 && template_yx[i][1] < template_x / 2 && template_yx[i][0] < template_y / 2){
         circle(sum_img, Point(input_x + template_yx[i][1], template_yx[i][0]), 2, Scalar(200,0,255), 1, 4);

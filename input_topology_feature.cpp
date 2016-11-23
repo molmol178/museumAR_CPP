@@ -72,8 +72,8 @@ int main(int argc, char** argv){
 
 
   GaussianBlur(input_img, Gaussian_input, Size(7, 7), 1.5, 1.5);
-  //cvtColor(Gaussian_input, input_hsv, CV_BGR2HSV);
-  cvtColor(Gaussian_input, input_hsv, CV_BGR2RGB);
+  cvtColor(Gaussian_input, input_hsv, CV_BGR2HSV);
+  //cvtColor(Gaussian_input, input_hsv, CV_BGR2RGB);
 
 
 
@@ -89,7 +89,6 @@ int main(int argc, char** argv){
   clean_label_img = tf.cleanLabelImage(dst_data, patch_size);
   imwrite("input_img_out/clean_label_img_input.tiff", clean_label_img);
 
-  cout << "test!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
 
   //unsigned short画像の領域をunsigned charのランダムな値で埋める
   //ラベル画像確認用
