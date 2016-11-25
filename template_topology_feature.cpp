@@ -73,8 +73,8 @@ int main(int argc, char** argv){
 
   clean_label_img = tf.cleanLabelImage(dst_data, patch_size);
   changed_label_img = tf.writeDstData(clean_label_img);
-  imwrite("template_img_out/clean_label_img.tiff", clean_label_img);
-  imwrite("template_img_out/changed_label_img.tiff", changed_label_img);
+  imwrite("template_img_out/template_clean_label_img.tiff", clean_label_img);
+  imwrite("template_img_out/template_changed_label_img.tiff", changed_label_img);
 
   //ofstream ofs("template_img_out/test_img.csv");
   //ofs << test_dst_data;

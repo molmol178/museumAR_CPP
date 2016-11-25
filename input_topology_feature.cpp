@@ -26,8 +26,6 @@ int main(int argc, char** argv){
   Mat template_img;
   Mat last_label_img;
 
-
-
  //コマンドライン引数
   int patch_size;
   int tmp_range;
@@ -79,7 +77,7 @@ int main(int argc, char** argv){
 
   label_input_img = tf.inputCreateLabelImg(input_hsv);
   //label_input_img = tf.template_splitRegion(tmp_range, input_hsv);
-  imwrite("input_img_out/label_input_img.tiff", label_input_img);
+  imwrite("input_img_out/input_label_input_img.tiff", label_input_img);
 
   dst_data = tf.re_label(label_input_img);
   //unsigned short画像の領域をunsigned charのランダムな値で埋める
@@ -87,15 +85,19 @@ int main(int argc, char** argv){
 
 
   clean_label_img = tf.cleanLabelImage(dst_data, patch_size);
-  imwrite("input_img_out/clean_label_img_input.tiff", clean_label_img);
+  imwrite("input_img_out/input_clean_label_img.tiff", clean_label_img);
+
+cout <<"test!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
 
 
   //unsigned short画像の領域をunsigned charのランダムな値で埋める
   //ラベル画像確認用
   changed_label_img = tf.writeDstData(clean_label_img);
-  imwrite("input_img_out/changed_label_img_input.tiff", changed_label_img);
+  imwrite("input_img_out/input_changed_label_img.tiff", changed_label_img);
 
   cout << "end label_img cleaning" << endl;
+cout <<"test!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+
 
   /*
   int input_y = clean_label_img.rows;

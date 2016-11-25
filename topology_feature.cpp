@@ -21,7 +21,7 @@ Mat TopologyFeature::template_splitRegion(int separate_range, Mat template_hsv){
   int template_y = template_hsv.rows;
   vector<Mat> planes;
   Mat v_value = Mat(template_y, template_x, CV_8UC1);
-  vector<int> v_count_list(256, 0);
+  vector<int> v_count_list(255, 0);
 
   split(template_hsv, planes);
   v_value = planes[2];
@@ -44,16 +44,10 @@ Mat TopologyFeature::template_splitRegion(int separate_range, Mat template_hsv){
 
 
 
-  vector<float> separation_list(256,0);
+  vector<float> separation_list(255,0);
   int tmp_range = separate_range;
-  for(int i = 0; i < tmp_range; i++){
-    separation_list[i] = 0;
-  }
-  for(int i = 256 - tmp_range; i < separation_list.size(); i++){
-    separation_list[i] = 0;
-  }
 
-  for(int i = 0 + tmp_range; i < 256 - tmp_range; i++){
+  for(int i = 0 + tmp_range; i < 255 - tmp_range; i++){
     float sum_k = 0;
     float sum_j = 0;
     float sum_l = 0;
@@ -84,7 +78,7 @@ Mat TopologyFeature::template_splitRegion(int separate_range, Mat template_hsv){
     float u1 = 0;
     float u2 = 0;
 
-    //floation point exception 例外処理
+    //floating point exception 例外処理
     if(sum_k <= 0){
       w1 = 0;
       w2 = 0;
@@ -154,12 +148,12 @@ Mat TopologyFeature::template_splitRegion(int separate_range, Mat template_hsv){
 
 
 
-  vector<int> label_list(256,0);
+  vector<int> label_list(255,0);
   vector<float> tmp_sep_list;
   vector<int> sep_index;
   vector<int> sep_max_index;
   int b = 1;
-  for(int a = 0 + 1; a < 256 - 1; a++){
+  for(int a = 0 + 1; a < 255 - 1; a++){
     /*
     label_list[a] = b;
     if(separation_list[a] > separation_list[a-1] &&
@@ -383,9 +377,10 @@ Mat TopologyFeature::cleanLabelImage(Mat dst_data, int patch_size){
 
 
   //パッチサイズよりも小さい領域を0にする
+  int dst_xy;
   for(int y = 0; y < y_size; y++){
     for(int x = 0; x < x_size; x++){
-    int dst_xy = dst_data.at<unsigned short>(y, x);
+      dst_xy = dst_data.at<unsigned short>(y, x);
       if (label_list[dst_xy] < patch_size/2 * patch_size/2 * M_PI){
         dst_data.at<unsigned short>(y,x) = 0;
       }
@@ -398,16 +393,22 @@ Mat TopologyFeature::cleanLabelImage(Mat dst_data, int patch_size){
 
 
   //１回目のスキャン．左上から右下へ
+  int tmp_dst_xy;
+  int dst_up;
+  int dst_left;
+  int tmp_dst_up;
+  int tmp_dst_left;
+
   for(int y = 1; y < y_size; y++){
     for(int x = 1; x < x_size; x++){
 
       if(dst_data.at<unsigned short>(y, x) == 0){
-        int dst_xy = dst_data.at<unsigned short>(y, x);
-        int tmp_dst_xy = tmp_dst_data.at<int>(y, x);
-        int dst_up = dst_data.at<unsigned short>(y-1, x);
-        int dst_left = dst_data.at<unsigned short>(y, x-1);
-        int tmp_dst_up = tmp_dst_data.at<int>(y-1, x);
-        int tmp_dst_left = tmp_dst_data.at<int>(y, x-1);
+        dst_xy = dst_data.at<unsigned short>(y, x);
+        tmp_dst_xy = tmp_dst_data.at<int>(y, x);
+        dst_up = dst_data.at<unsigned short>(y-1, x);
+        dst_left = dst_data.at<unsigned short>(y, x-1);
+        tmp_dst_up = tmp_dst_data.at<int>(y-1, x);
+        tmp_dst_left = tmp_dst_data.at<int>(y, x-1);
 
         //上と左の画素を見て面積の大きい方をラベル画像に代入
         if(label_list[dst_up] >= label_list[dst_left]){
@@ -425,17 +426,23 @@ Mat TopologyFeature::cleanLabelImage(Mat dst_data, int patch_size){
     }
   }
 
+
   //２回目のスキャン．右下から左上へ
+  int dst_down;
+  int dst_right;
+  int tmp_dst_down;
+  int tmp_dst_right;
+
   for(int y = y_size - 2; y > 1; y--){
     for(int x = x_size - 2; x > 1; x--){
 
       if(tmp_dst_data.at<int>(y, x) > 0){
-        int dst_xy = dst_data.at<unsigned short>(y, x);
-        int tmp_dst_xy = tmp_dst_data.at<int>(y, x);
-        int dst_down = dst_data.at<unsigned short>(y+1, x);
-        int dst_right = dst_data.at<unsigned short>(y, x+1);
-        int tmp_dst_down = tmp_dst_data.at<int>(y+1, x);
-        int tmp_dst_right = tmp_dst_data.at<int>(y, x+1);
+        dst_xy = dst_data.at<unsigned short>(y, x);
+        tmp_dst_xy = tmp_dst_data.at<int>(y, x);
+        dst_down = dst_data.at<unsigned short>(y+1, x);
+        dst_right = dst_data.at<unsigned short>(y, x+1);
+        tmp_dst_down = tmp_dst_data.at<int>(y+1, x);
+        tmp_dst_right = tmp_dst_data.at<int>(y, x+1);
 
         //距離画像に対して１回目のスキャンのときの値より大きい値を代入できる時
         if(tmp_dst_xy > tmp_dst_down + 1
@@ -461,6 +468,8 @@ Mat TopologyFeature::cleanLabelImage(Mat dst_data, int patch_size){
       }
     }
   }
+
+  cout << "input label create" << endl;
   return dst_data;
 }
 
@@ -490,7 +499,7 @@ Mat TopologyFeature::writeDstData(Mat clean_label_img){
   }
 
   for(int i = 0; i < label_list.size(); i++){
-    int lucky = 1 + rand() % (256 - 1);
+    int lucky = 1 + rand() % (255 - 1);
     for(int y = 0; y < y_size; y++){
       for(int x = 0; x < x_size; x++){
           if(clean_label_img.at<unsigned short>(y, x) == i){
@@ -844,7 +853,6 @@ void TopologyFeature::calcMeanVector(int x, int y, int min_label_word, vector<in
       }
     }
   }
-  /*
   cout << "calc vector=========================================================" << endl;;
   cout << "sum_min_label_coordinate" << endl;
   for(int i = 0; i < sum_min_label_coordinate.size(); i++){
@@ -853,14 +861,16 @@ void TopologyFeature::calcMeanVector(int x, int y, int min_label_word, vector<in
     }
     cout << endl;
   }
-  */
   //calc mean vector
+  int y_vector = 0;
+  int x_vector = 0;
   int sum_y_vector = 0;
   int sum_x_vector = 0;
   int cnt_vector = 0;
   for(int j = 0; j < sum_min_label_coordinate.size(); j ++){
-    int y_vector = sum_min_label_coordinate[j][0] - y;
-    int x_vector = sum_min_label_coordinate[j][1] - x;
+    //中心とパッチの小さい方のベクトルを計算
+    y_vector = sum_min_label_coordinate[j][0] - (y + 3);
+    x_vector = sum_min_label_coordinate[j][1] - (x + 3);
     sum_y_vector += y_vector;
     sum_x_vector += x_vector;
     cnt_vector ++;
@@ -1038,7 +1048,7 @@ Mat TopologyFeature::inputCreateLabelImg(Mat input_hsv){
 
   vector<Mat> planes;
   Mat input_v_value = Mat(input_y, input_x, CV_8UC1);
-  vector<int> input_v_hist(256, 0);
+  vector<int> input_v_hist(255, 0);
 
   split(input_hsv, planes);
   input_v_value = planes[2];
@@ -1111,7 +1121,7 @@ Mat TopologyFeature::inputCreateLabelImg(Mat input_hsv){
   }
   float input_std_deviation = sqrt(oi);
 
-  vector<int> correct_input_v_hist(256, 0);
+  vector<int> correct_input_v_hist(255, 0);
   for(int iii = 0; iii < correct_input_v_hist.size(); iii++){
     float corre_input = template_std_deviation * ((input_v_hist[iii] - ave_i) / input_std_deviation) + ave_t;
     if(corre_input < 0){
@@ -1210,7 +1220,7 @@ void TopologyFeature::featureMatching(Mat input_img, Mat template_img, vector<ve
 
       //if(h == 0 && calc_ave == 0 && boundary == 0 && calc_min_label == 0){
       //if(boundary == 0 && calc_min_label == 0){
-        cout << "calc_simi_vector = " << calc_simi_vector << endl;
+          cout << "calc_simi_vector = " << calc_simi_vector << endl;
       if(h == 0 && calc_min_label == 0 && calc_simi_vector == 1){
         //第一象限
         //if(sum_xy[j][1] < input_x / 2 && sum_xy[j][0] < input_y / 2 && template_yx[i][1] < template_x / 2 && template_yx[i][0] < template_y / 2){
@@ -1260,7 +1270,7 @@ int TopologyFeature::graphPlot(){
   return -1;
   fputs("set datafile separator ','\n", fp);
   fputs("set terminal pdf\n", fp);
-  fputs("set xrange [0:256]\n", fp);
+  fputs("set xrange [0:255]\n", fp);
   fputs("set yrange [0:30000]\n", fp);
   fputs("set y2range [0:10]\n", fp);
   fputs("set terminal png\n", fp);
@@ -1283,14 +1293,14 @@ int TopologyFeature::graphPlot(){
   if (fp2 == NULL)
   return -1;
   fputs("set datafile separator ','\n", fp2);
-  fputs("set terminal pdf\n", fp);
-  fputs("set xrange [0:256]\n", fp2);
+  fputs("set terminal pdf\n", fp2);
+  fputs("set xrange [0:255]\n", fp2);
   fputs("set yrange [0:30000]\n", fp2);
   fputs("set terminal png\n", fp2);
   fputs("set grid\n", fp2);
   fputs("set ylabel 'histgram'\n", fp2);
   fputs("set key top left\n", fp2);
-  fputs("set title 'histgram of template, input, correct input'\n", fp);
+  fputs("set title 'histgram of template, input, correct input'\n", fp2);
   fputs("set style fill solid border lc rgb 'red'\n", fp2);
   fputs("set output '/Users/mol/Development/museum_ar_cpp/graphPlot/input_histgrams.pdf'\n", fp2);
   fputs("plot 'graphPlot/template_v_count_list.csv' with lines title 'template histgram', 'graphPlot/input_v_count_list.csv' with lines title 'input histgram', 'graphPlot/correct_input_v_count_list.csv' with lines title 'corrected input histgram' linecolor rgbcolor 'red' \n", fp2);
