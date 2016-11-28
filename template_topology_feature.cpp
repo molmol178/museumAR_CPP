@@ -20,8 +20,7 @@ int main(int argc, char** argv){
   Mat changed_label_img;
   Mat template_img;
   Mat last_label_img;
-
-
+  Mat last_changed_label_img;
 
  //コマンドライン引数
   int patch_size;
@@ -50,8 +49,8 @@ int main(int argc, char** argv){
   }
 
 //featureDetection variables
-  vector<vector<int> > sum_label_one_dimention_scanning;
-  //vector<vector<int> > sum_one_dimention_scanning;
+  //vector<vector<int> > sum_label_one_dimention_scanning;
+  vector<vector<int> > sum_one_dimention_scanning;
   vector<vector<int> > sum_xy;
   vector<vector<int> > sum_boundary;
   vector<vector<double> > sum_ave_keypoint;
@@ -61,8 +60,8 @@ int main(int argc, char** argv){
   vector<vector<int> > sum_mean_vector;
 
   GaussianBlur(template_img, Gaussian_template, Size(7,7), 1.5, 1.5);
-  cvtColor(Gaussian_template, template_hsv, CV_BGR2HSV);
-  //cvtColor(Gaussian_template, template_hsv, CV_BGR2RGB);
+  //cvtColor(Gaussian_template, template_hsv, CV_BGR2HSV);
+  cvtColor(Gaussian_template, template_hsv, CV_BGR2RGB);
 
 
   label_template_img = tf.template_splitRegion(tmp_range, template_hsv);
@@ -73,8 +72,19 @@ int main(int argc, char** argv){
 
   clean_label_img = tf.cleanLabelImage(dst_data, patch_size);
   changed_label_img = tf.writeDstData(clean_label_img);
+
+  last_label_img = tf.remapLabel(clean_label_img);
+  last_changed_label_img = tf.writeDstData(last_label_img);
+
+  ofstream test("template_test.csv");
+  test <<last_label_img;
+  test << endl;
+
   imwrite("template_img_out/template_clean_label_img.tiff", clean_label_img);
   imwrite("template_img_out/template_changed_label_img.tiff", changed_label_img);
+  imwrite("template_img_out/template_last_changed_label_img.tiff", last_changed_label_img);
+
+
 
   //ofstream ofs("template_img_out/test_img.csv");
   //ofs << test_dst_data;
@@ -110,8 +120,7 @@ int main(int argc, char** argv){
 
 
   cout << "feature detection" << endl;
-  sum_min_label_word = tf.featureDetection(patch_size, label_template_img,clean_label_img, &sum_label_one_dimention_scanning, &sum_xy, &sum_boundary, &sum_ave_keypoint, &sum_mean_vector);
-  //sum_min_label_word = tf.featureDetection(patch_size, label_template_img,clean_label_img, &sum_one_dimention_scanning, &sum_xy, &sum_boundary, &sum_ave_keypoint);
+  sum_min_label_word = tf.featureDetection(patch_size,last_label_img, &sum_one_dimention_scanning, &sum_xy, &sum_boundary, &sum_ave_keypoint, &sum_mean_vector);
 
   /*
   cout << "===============================================================" << endl;
@@ -139,13 +148,8 @@ int main(int argc, char** argv){
   cout << "finish feature detection" << endl;
   */
 
-  string template_sum_label_d_path = "template_img_out/template_sum_label_one_dimention_scanning.csv";
-  tf.twod_intCsvWriter(sum_label_one_dimention_scanning, template_sum_label_d_path);
-
-  /*
-  string sum_one_d_scan = "template_img_out/template_sum_one_dimention_scanning.csv";
-  tf.twod_intCsvWriter(sum_one_dimention_scanning, sum_one_d_scan);
-  */
+  string template_sum_label_d_path = "template_img_out/template_sum_one_dimention_scanning.csv";
+  tf.twod_intCsvWriter(sum_one_dimention_scanning, template_sum_label_d_path);
 
   string template_sum_xy_path = "template_img_out/template_yx.csv";
   tf.twod_intCsvWriter(sum_xy, template_sum_xy_path);
@@ -165,8 +169,7 @@ int main(int argc, char** argv){
   template_img = tf.writeFeaturePoint(template_img, &sum_xy, &sum_boundary);
   imwrite("template_img_out/template_detect_feature_point.tiff", template_img);
 
-  keypoint_binary = tf.featureDescription(&sum_label_one_dimention_scanning, label_template_img);
-  //keypoint_binary = tf.featureDescription(&sum_one_dimention_scanning, clean_label_img);
+  keypoint_binary = tf.featureDescription(&sum_one_dimention_scanning, last_label_img);
 
   string key_bin_path = "template_img_out/template_keypoint_binary.csv";
   tf.twod_intCsvWriter(keypoint_binary, key_bin_path);

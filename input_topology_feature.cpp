@@ -25,6 +25,7 @@ int main(int argc, char** argv){
   Mat input_img;
   Mat template_img;
   Mat last_label_img;
+  Mat last_changed_label_img;
 
  //コマンドライン引数
   int patch_size;
@@ -58,8 +59,8 @@ int main(int argc, char** argv){
 
 
 //featureDetection variables
-  //vector<vector<int> > sum_one_dimention_scanning;
-  vector<vector<int> > sum_label_one_dimention_scanning;
+  vector<vector<int> > sum_one_dimention_scanning;
+  //vector<vector<int> > sum_label_one_dimention_scanning;
   vector<vector<int> > sum_xy;
   vector<vector<int> > sum_boundary;
   vector<vector<double> > sum_ave_keypoint;
@@ -70,8 +71,8 @@ int main(int argc, char** argv){
 
 
   GaussianBlur(input_img, Gaussian_input, Size(7, 7), 1.5, 1.5);
-  cvtColor(Gaussian_input, input_hsv, CV_BGR2HSV);
-  //cvtColor(Gaussian_input, input_hsv, CV_BGR2RGB);
+  //cvtColor(Gaussian_input, input_hsv, CV_BGR2HSV);
+  cvtColor(Gaussian_input, input_hsv, CV_BGR2RGB);
 
 
 
@@ -86,17 +87,19 @@ int main(int argc, char** argv){
 
   clean_label_img = tf.cleanLabelImage(dst_data, patch_size);
   imwrite("input_img_out/input_clean_label_img.tiff", clean_label_img);
+  last_label_img = tf.remapLabel(clean_label_img);
 
-cout <<"test!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
-
-
+  ofstream test("input_test.csv");
+  test << last_label_img;
+  test << endl;
   //unsigned short画像の領域をunsigned charのランダムな値で埋める
   //ラベル画像確認用
   changed_label_img = tf.writeDstData(clean_label_img);
   imwrite("input_img_out/input_changed_label_img.tiff", changed_label_img);
+  last_changed_label_img = tf.writeDstData(last_label_img);
+  imwrite("input_img_out/input_last_changed_label_img.tiff", last_changed_label_img);
 
   cout << "end label_img cleaning" << endl;
-cout <<"test!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
 
 
   /*
@@ -126,16 +129,11 @@ cout <<"test!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
  */
 
   cout << "feature detection" << endl;
-  sum_min_label_word = tf.featureDetection(patch_size, label_input_img,clean_label_img, &sum_label_one_dimention_scanning, &sum_xy, &sum_boundary, &sum_ave_keypoint, &sum_mean_vector);
-  //sum_min_label_word = tf.featureDetection(patch_size, label_input_img,clean_label_img, &sum_one_dimention_scanning, &sum_xy, &sum_boundary, &sum_ave_keypoint);
+  sum_min_label_word = tf.featureDetection(patch_size,last_label_img, &sum_one_dimention_scanning, &sum_xy, &sum_boundary, &sum_ave_keypoint, &sum_mean_vector);
 
-  /*
+
   string sum_one_d_scan_path = "input_img_out/input_sum_one_dimention_scanning.csv";
   tf.twod_intCsvWriter(sum_one_dimention_scanning, sum_one_d_scan_path);
-  */
-
-  string sum_one_d_scan_path = "input_img_out/input_sum_label_one_dimention_scanning.csv";
-  tf.twod_intCsvWriter(sum_label_one_dimention_scanning, sum_one_d_scan_path);
 
   string sum_xy_path = "input_img_out/input_yx.csv";
   tf.twod_intCsvWriter(sum_xy, sum_xy_path);
@@ -155,14 +153,12 @@ cout <<"test!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
   input_img = tf.writeFeaturePoint(input_img, &sum_xy, &sum_boundary);
   imwrite("input_img_out/input_detect_feature_point.tiff", input_img);
 
-  keypoint_binary = tf.featureDescription(&sum_label_one_dimention_scanning, label_input_img);
-  //keypoint_binary = tf.featureDescription(&sum_one_dimention_scanning, clean_label_img);
+  keypoint_binary = tf.featureDescription(&sum_one_dimention_scanning,last_label_img);
 
   string key_bin_path = "input_img_out/input_keypoint_binary.csv";
   tf.twod_intCsvWriter(keypoint_binary, key_bin_path);
 
-  tf.featureMatching(input_img, template_img, keypoint_binary, sum_label_one_dimention_scanning, sum_xy, sum_boundary, sum_ave_keypoint, sum_min_label_word, sum_mean_vector);
-  //tf.featureMatching(input_img, template_img, keypoint_binary, sum_one_dimention_scanning, sum_xy, sum_boundary, sum_ave_keypoint, sum_min_label_word);
+  tf.featureMatching(input_img, template_img, keypoint_binary, sum_one_dimention_scanning, sum_xy, sum_boundary, sum_ave_keypoint, sum_min_label_word, sum_mean_vector);
 
   tf.graphPlot();
   return 0;

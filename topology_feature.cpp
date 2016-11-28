@@ -144,10 +144,6 @@ Mat TopologyFeature::template_splitRegion(int separate_range, Mat template_hsv){
   string sep_vertical_path = "graphPlot/template_separation_list.csv";
   oned_vertical_floatCsvWriter(separation_list, sep_vertical_path);
 
-
-
-
-
   vector<int> label_list(255,0);
   vector<float> tmp_sep_list;
   vector<int> sep_index;
@@ -472,7 +468,62 @@ Mat TopologyFeature::cleanLabelImage(Mat dst_data, int patch_size){
   cout << "input label create" << endl;
   return dst_data;
 }
+/*
+---------------------------------------------------------------------------------------------------
+画像の内面積が大きい領域から順にラベルを付け直す
+---------------------------------------------------------------------------------------------------
+*/
+Mat TopologyFeature::remapLabel(Mat label_img){
 
+  int y_size = label_img.rows;
+  int x_size = label_img.cols;
+  Mat remap_label_img = Mat(y_size, x_size, CV_16UC1);
+
+  //label_imgの最大値を求める(maxVal)
+  double maxVal;
+  minMaxLoc(label_img, NULL, &maxVal);
+
+  //maxValの大きさの配列を作る
+  vector<int> label_list(maxVal, 0);
+  int label;
+
+  //label_imgの面積を求めて配列に格納
+  for(int y = 0; y < y_size; y++){
+    for(int x = 0; x < x_size; x++){
+      label = label_img.at<unsigned short>(y, x);
+      label_list[label] += 1;
+    }
+  }
+
+  int max_list = *max_element(label_list.begin(), label_list.end());
+  cout << "max_list = " << max_list  <<endl;
+  vector<int> asc_index_label_list;
+
+  while(max_list != 0){
+    for(int i = 0; i < label_list.size(); i++){
+      if(label_list[i] == max_list){
+        asc_index_label_list.push_back(i);
+        cout << "get!!" << endl;
+      }
+      if(i == label_list.size() -1){
+        max_list = max_list -1;
+        //cout <<  endl;
+      }
+    }
+  }
+
+  for(int i = 0; i < asc_index_label_list.size(); i++){
+    for(int y = 0; y < y_size; y++){
+      for(int x = 0; x < x_size; x++){
+        if(label_img.at<unsigned short>(y,x) == asc_index_label_list[i]){
+          remap_label_img.at<unsigned short>(y,x) = i;
+        }
+      }
+    }
+  }
+
+  return remap_label_img;
+}
 
 /*
 ---------------------------------------------------------------------------------------------------
@@ -517,11 +568,11 @@ Mat TopologyFeature::writeDstData(Mat clean_label_img){
 トポロジの特徴を用いた特徴点検出
 ---------------------------------------------------------------------------------------------------
 */
-vector<vector<int> > TopologyFeature::featureDetection(int patch_size, Mat label_img, Mat changed_label_img, vector<vector<int> > *sum_label_one_dimention_scanning, vector<vector<int> > *sum_xy, vector<vector<int> > *sum_boundary, vector<vector<double> > *sum_ave_keypoint, vector<vector<int> > *sum_mean_vector){
-//vector<vector<int> > TopologyFeature::featureDetection(int patch_size, Mat label_img, Mat changed_label_img, vector<vector<int> > *sum_one_dimention_scanning, vector<vector<int> > *sum_xy, vector<vector<int> > *sum_boundary, vector<vector<double> > *sum_ave_keypoint, vector<vector<int> > *sum_mean_vector){
+//vector<vector<int> > TopologyFeature::featureDetection(int patch_size, Mat label_img, Mat changed_label_img, vector<vector<int> > *sum_label_one_dimention_scanning, vector<vector<int> > *sum_xy, vector<vector<int> > *sum_boundary, vector<vector<double> > *sum_ave_keypoint, vector<vector<int> > *sum_mean_vector){
+vector<vector<int> > TopologyFeature::featureDetection(int patch_size, Mat changed_label_img, vector<vector<int> > *sum_one_dimention_scanning, vector<vector<int> > *sum_xy, vector<vector<int> > *sum_boundary, vector<vector<double> > *sum_ave_keypoint, vector<vector<int> > *sum_mean_vector){
 
-  vector<vector<int> > this_sum_label_one_dimention_scanning = *sum_label_one_dimention_scanning;
-  //vector<vector<int> > this_sum_one_dimention_scanning = *sum_one_dimention_scanning;
+  //vector<vector<int> > this_sum_label_one_dimention_scanning = *sum_label_one_dimention_scanning;
+  vector<vector<int> > this_sum_one_dimention_scanning = *sum_one_dimention_scanning;
   vector<vector<int> > this_sum_xy = *sum_xy;
   vector<vector<int> > this_sum_boundary = *sum_boundary;
   vector<vector<double> > this_sum_ave_keypoint = *sum_ave_keypoint;
@@ -534,27 +585,25 @@ vector<vector<int> > TopologyFeature::featureDetection(int patch_size, Mat label
 
 
   Mat scanning_filter(n, n, CV_16U);
-  Mat scanning_label_filter(n, n, CV_8UC1);
 
   int scan_x = scanning_filter.cols;
   int scan_y = scanning_filter.rows;
 
   vector<vector<int> > sum_min_label_word;
 
-  for(int y = 0; y < y_size - scan_y; y += patch_size/2){
-    for(int x = 0; x < x_size - scan_x; x += patch_size/2){
+  //for(int y = 0; y < y_size - scan_y; y += patch_size/2){
+  //  for(int x = 0; x < x_size - scan_x; x += patch_size/2){
+  for(int y = 0; y < y_size - scan_y; y++){
+    for(int x = 0; x < x_size - scan_x; x++){
       for(int s_y = 0; s_y < scan_y; s_y++){
         for(int s_x = 0; s_x < scan_x; s_x++){
           scanning_filter.at<unsigned short>(s_y, s_x) = changed_label_img.at<unsigned short>(s_y + y, s_x + x);
-          scanning_label_filter.at<unsigned char>(s_y, s_x) = label_img.at<unsigned char>(s_y + y, s_x + x);
         }
       }
           //patch_sizeによって変わる
           int one_d_data[] = {scanning_filter.at<unsigned short>(0,3),scanning_filter.at<unsigned short>(0,4),scanning_filter.at<unsigned short>(1,5),scanning_filter.at<unsigned short>(2,6),scanning_filter.at<unsigned short>(3,6),scanning_filter.at<unsigned short>(4,6),scanning_filter.at<unsigned short>(5,5),scanning_filter.at<unsigned short>(6,4),scanning_filter.at<unsigned short>(6,3),scanning_filter.at<unsigned short>(6,2),scanning_filter.at<unsigned short>(5,1),scanning_filter.at<unsigned short>(4,0),scanning_filter.at<unsigned short>(3,0),scanning_filter.at<unsigned short>(2,0),scanning_filter.at<unsigned short>(1,1),scanning_filter.at<unsigned short>(0,2)};
-          int label_one_d_data[] = {scanning_label_filter.at<unsigned char>(0,3),scanning_label_filter.at<unsigned char>(0,4),scanning_label_filter.at<unsigned char>(1,5),scanning_label_filter.at<unsigned char>(2,6),scanning_label_filter.at<unsigned char>(3,6),scanning_label_filter.at<unsigned char>(4,6),scanning_label_filter.at<unsigned char>(5,5),scanning_label_filter.at<unsigned char>(6,4),scanning_label_filter.at<unsigned char>(6,3),scanning_label_filter.at<unsigned char>(6,2),scanning_label_filter.at<unsigned char>(5,1),scanning_label_filter.at<unsigned char>(4,0),scanning_label_filter.at<unsigned char>(3,0),scanning_label_filter.at<unsigned char>(2,0),scanning_label_filter.at<unsigned char>(1,1),scanning_label_filter.at<unsigned char>(0,2)};
 
           vector<int> one_dimention_scanning(one_d_data,end(one_d_data));
-          vector<int> label_one_dimention_scanning(label_one_d_data,end(label_one_d_data));
           //patch_sizeによって変わる
           int scanning_center = {scanning_filter.at<unsigned short>(3,3)};
           int one_d_count = 0;
@@ -570,11 +619,8 @@ vector<vector<int> > TopologyFeature::featureDetection(int patch_size, Mat label
           if(one_d_count != 0){
             //one_dimention_scanningの要素の種類とその数をリスト
             vector<int> word_list;
-            vector<int> label_word_list;
             vector<int> cnt_list;
-            vector<int> label_cnt_list;
             int one_d_size = one_dimention_scanning.size();
-            int label_one_d_size = label_one_dimention_scanning.size();
 
             word_list.push_back(one_dimention_scanning[0]);
             cnt_list.push_back(1);
@@ -592,23 +638,6 @@ vector<vector<int> > TopologyFeature::featureDetection(int patch_size, Mat label
                   cnt_list.push_back(1);
                 }
             }
-            //label用
-            label_word_list.push_back(label_one_dimention_scanning[0]);
-            label_cnt_list.push_back(1);
-
-            for(int o = 1; o < label_one_d_size; o++){
-              int label_match = 0;
-              for (int w = 0; w < label_word_list.size(); w++){
-                if (label_word_list[w] == label_one_dimention_scanning[o]){
-                  label_cnt_list[w] += 1;
-                  label_match = 1;
-                }
-              }
-                if(label_match == 0){
-                  label_word_list.push_back(label_one_dimention_scanning[o]);
-                  label_cnt_list.push_back(1);
-                }
-            }
 
             //cnt_listの最小値をとる
             int min_cnt = *min_element(cnt_list.begin(), cnt_list.end());
@@ -617,13 +646,6 @@ vector<vector<int> > TopologyFeature::featureDetection(int patch_size, Mat label
             //cnt_listの最小値のインデックス
             size_t cnt_minIndex = distance(cnt_list.begin(), min_cntIt);
 
-            //label用
-            //cnt_listの最小値をとる
-            int label_min_cnt = *min_element(label_cnt_list.begin(), label_cnt_list.end());
-            //cnt_listの最小値のためのイテレータ
-            vector<int>::iterator label_min_cntIt = min_element(label_cnt_list.begin(), label_cnt_list.end());
-            //cnt_listの最小値のインデックス
-            size_t label_cnt_minIndex = distance(label_cnt_list.begin(), label_min_cntIt);
 
             /*
             cout << "-------------------one_d_lists----------------------" << endl;
@@ -657,20 +679,20 @@ vector<vector<int> > TopologyFeature::featureDetection(int patch_size, Mat label
                 if(min_cnt <= one_n / 3){
                   //word_listの合計を求める
                   int tmp_boundary = 2;
-                  int min_label_word = label_word_list[label_cnt_minIndex];
-                  sum_min_label_word = saveFeaturePoint(x, y, min_label_word, label_one_dimention_scanning, label_word_list, tmp_boundary, &this_sum_label_one_dimention_scanning, &this_sum_xy, &this_sum_boundary, &this_sum_ave_keypoint, sum_min_label_word);
+                  int min_label_word = word_list[cnt_minIndex];
+                  sum_min_label_word = saveFeaturePoint(x, y, min_label_word, one_dimention_scanning, word_list, tmp_boundary, &this_sum_one_dimention_scanning, &this_sum_xy, &this_sum_boundary, &this_sum_ave_keypoint, sum_min_label_word);
                   //sum_min_label_word = saveFeaturePoint(x, y, min_label_word, one_dimention_scanning, label_word_list, tmp_boundary, &this_sum_one_dimention_scanning, &this_sum_xy, &this_sum_boundary, &this_sum_ave_keypoint, sum_min_label_word);
-                  calcMeanVector(x, y, min_label_word, label_one_dimention_scanning, &this_sum_mean_vector);
+                  calcMeanVector(x, y, min_label_word, one_dimention_scanning, &this_sum_mean_vector);
                 }
               }
             }
             else if(one_d_count == 2){
               if(word_list.size() == 3){
                 int tmp_boundary = 3;
-                int min_label_word = label_word_list[label_cnt_minIndex];
-                sum_min_label_word = saveFeaturePoint(x, y, min_label_word,label_one_dimention_scanning,label_word_list, tmp_boundary, &this_sum_label_one_dimention_scanning, &this_sum_xy, &this_sum_boundary, &this_sum_ave_keypoint, sum_min_label_word);
+                int min_label_word = word_list[cnt_minIndex];
+                sum_min_label_word = saveFeaturePoint(x, y, min_label_word,one_dimention_scanning,word_list, tmp_boundary, &this_sum_one_dimention_scanning, &this_sum_xy, &this_sum_boundary, &this_sum_ave_keypoint, sum_min_label_word);
                 //sum_min_label_word = saveFeaturePoint(x, y, min_label_word, one_dimention_scanning, label_word_list, tmp_boundary, &this_sum_one_dimention_scanning, &this_sum_xy, &this_sum_boundary, &this_sum_ave_keypoint, sum_min_label_word);
-                calcMeanVector(x, y, min_label_word, label_one_dimention_scanning, &this_sum_mean_vector);
+                calcMeanVector(x, y, min_label_word, one_dimention_scanning, &this_sum_mean_vector);
 
                 }
               //patch_sizeによって変わる
@@ -678,10 +700,10 @@ vector<vector<int> > TopologyFeature::featureDetection(int patch_size, Mat label
                 //最も小さいラベルが120度以下
                 if(min_cnt <= one_n / 3){
                 int tmp_boundary = 2;
-                int min_label_word = label_word_list[label_cnt_minIndex];
-                sum_min_label_word = saveFeaturePoint(x, y, min_label_word,label_one_dimention_scanning,label_word_list, tmp_boundary, &this_sum_label_one_dimention_scanning, &this_sum_xy, &this_sum_boundary, &this_sum_ave_keypoint, sum_min_label_word);
+                int min_label_word = word_list[cnt_minIndex];
+                sum_min_label_word = saveFeaturePoint(x, y, min_label_word, one_dimention_scanning, word_list, tmp_boundary, &this_sum_one_dimention_scanning, &this_sum_xy, &this_sum_boundary, &this_sum_ave_keypoint, sum_min_label_word);
                 //sum_min_label_word = saveFeaturePoint(x, y, min_label_word, one_dimention_scanning, label_word_list, tmp_boundary, &this_sum_one_dimention_scanning, &this_sum_xy, &this_sum_boundary, &this_sum_ave_keypoint, sum_min_label_word);
-                calcMeanVector(x, y, min_label_word, label_one_dimention_scanning, &this_sum_mean_vector);
+                calcMeanVector(x, y, min_label_word, one_dimention_scanning, &this_sum_mean_vector);
                 }
               }
           }
@@ -690,10 +712,10 @@ vector<vector<int> > TopologyFeature::featureDetection(int patch_size, Mat label
               if (one_dimention_scanning[0] == one_dimention_scanning[15]){
                 //最も小さいラベルが120度以下
                 int tmp_boundary = 3;
-                int min_label_word = label_word_list[label_cnt_minIndex];
-                sum_min_label_word = saveFeaturePoint(x, y, min_label_word,label_one_dimention_scanning,label_word_list, tmp_boundary, &this_sum_label_one_dimention_scanning, &this_sum_xy, &this_sum_boundary, &this_sum_ave_keypoint, sum_min_label_word);
+                int min_label_word = word_list[cnt_minIndex];
+                sum_min_label_word = saveFeaturePoint(x, y, min_label_word, one_dimention_scanning, word_list, tmp_boundary, &this_sum_one_dimention_scanning, &this_sum_xy, &this_sum_boundary, &this_sum_ave_keypoint, sum_min_label_word);
                 //sum_min_label_word = saveFeaturePoint(x, y, min_label_word, one_dimention_scanning, label_word_list, tmp_boundary, &this_sum_one_dimention_scanning, &this_sum_xy, &this_sum_boundary, &this_sum_ave_keypoint, sum_min_label_word);
-                calcMeanVector(x, y, min_label_word, label_one_dimention_scanning, &this_sum_mean_vector);
+                calcMeanVector(x, y, min_label_word, one_dimention_scanning, &this_sum_mean_vector);
               }
            }
         }
@@ -701,8 +723,8 @@ vector<vector<int> > TopologyFeature::featureDetection(int patch_size, Mat label
   }
 
   //return
-  *sum_label_one_dimention_scanning = this_sum_label_one_dimention_scanning;
-  //*sum_one_dimention_scanning = this_sum_one_dimention_scanning;
+  //*sum_label_one_dimention_scanning = this_sum_label_one_dimention_scanning;
+  *sum_one_dimention_scanning = this_sum_one_dimention_scanning;
   *sum_xy = this_sum_xy;
   *sum_boundary = this_sum_boundary;
   *sum_ave_keypoint = this_sum_ave_keypoint;
@@ -1220,8 +1242,9 @@ void TopologyFeature::featureMatching(Mat input_img, Mat template_img, vector<ve
 
       //if(h == 0 && calc_ave == 0 && boundary == 0 && calc_min_label == 0){
       //if(boundary == 0 && calc_min_label == 0){
-          cout << "calc_simi_vector = " << calc_simi_vector << endl;
-      if(h == 0 && calc_min_label == 0 && calc_simi_vector == 1){
+      cout << "calc_simi_vector = " << calc_simi_vector << endl;
+      if(calc_min_label == 0 && calc_simi_vector == 1){
+      //if(h == 0){
         //第一象限
         //if(sum_xy[j][1] < input_x / 2 && sum_xy[j][0] < input_y / 2 && template_yx[i][1] < template_x / 2 && template_yx[i][0] < template_y / 2){
         circle(sum_img, Point(input_x + template_yx[i][1], template_yx[i][0]), 2, Scalar(200,0,255), 1, 4);
