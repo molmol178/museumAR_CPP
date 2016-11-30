@@ -51,7 +51,7 @@ int main(int argc, char** argv){
 //featureDetection variables
   //vector<vector<int> > sum_label_one_dimention_scanning;
   vector<vector<int> > sum_one_dimention_scanning;
-  vector<vector<int> > sum_xy;
+  vector<vector<float> > sum_xy;
   vector<vector<int> > sum_boundary;
   vector<vector<double> > sum_ave_keypoint;
 
@@ -152,7 +152,7 @@ int main(int argc, char** argv){
   tf.twod_intCsvWriter(sum_one_dimention_scanning, template_sum_label_d_path);
 
   string template_sum_xy_path = "template_img_out/template_yx.csv";
-  tf.twod_intCsvWriter(sum_xy, template_sum_xy_path);
+  tf.twod_floatCsvWriter(sum_xy, template_sum_xy_path);
 
   string sum_boundary_path = "template_img_out/template_sum_boundary.csv";
   tf.twod_intCsvWriter(sum_boundary, sum_boundary_path);

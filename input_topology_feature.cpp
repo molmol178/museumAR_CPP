@@ -61,7 +61,7 @@ int main(int argc, char** argv){
 //featureDetection variables
   vector<vector<int> > sum_one_dimention_scanning;
   //vector<vector<int> > sum_label_one_dimention_scanning;
-  vector<vector<int> > sum_xy;
+  vector<vector<float> > sum_xy;
   vector<vector<int> > sum_boundary;
   vector<vector<double> > sum_ave_keypoint;
 
@@ -92,6 +92,7 @@ int main(int argc, char** argv){
   ofstream test("input_test.csv");
   test << last_label_img;
   test << endl;
+
   //unsigned short画像の領域をunsigned charのランダムな値で埋める
   //ラベル画像確認用
   changed_label_img = tf.writeDstData(clean_label_img);
@@ -136,7 +137,7 @@ int main(int argc, char** argv){
   tf.twod_intCsvWriter(sum_one_dimention_scanning, sum_one_d_scan_path);
 
   string sum_xy_path = "input_img_out/input_yx.csv";
-  tf.twod_intCsvWriter(sum_xy, sum_xy_path);
+  tf.twod_floatCsvWriter(sum_xy, sum_xy_path);
 
   string sum_boundary_path = "input_img_out/input_sum_boundary.csv";
   tf.twod_intCsvWriter(sum_boundary, sum_boundary_path);
@@ -158,6 +159,101 @@ int main(int argc, char** argv){
   string key_bin_path = "input_img_out/input_keypoint_binary.csv";
   tf.twod_intCsvWriter(keypoint_binary, key_bin_path);
 
+/*
+  KeyPoint input_key;
+  vector<KeyPoint> input_keypoints;
+  for(int y = 0; y < sum_xy.size(); y++){
+      float xpt = sum_xy[y][1];
+      float ypt = sum_xy[y][0];
+      input_key.pt.x = xpt;
+      input_key.pt.y = ypt;
+      input_key.size = 7;
+      input_key.angle = -1;
+      float xangle = sum_mean_vector[y][0];
+      float yangle = sum_mean_vector[y][1];
+      float angle=acos(xangle/sqrt(xangle*xangle+yangle*yangle));
+      angle=angle*180.0/M_PI;
+      if(yangle<0)angle=360.0-angle;
+      input_key.angle = angle;
+      input_keypoints.push_back(input_key);
+  }
+
+  string  template_yx_path = "template_img_out/template_yx.csv";
+  vector<vector<float> > template_xy;
+  template_xy = tf.twod_floatCsvReader(template_yx_path);
+  string template_mean_vector_path = "template_img_out/template_sum_mean_vector.csv";
+  vector<vector<int> > template_mean_vector;
+  template_mean_vector = tf.twod_intCsvReader(template_mean_vector_path);
+
+  KeyPoint template_key;
+  vector<KeyPoint> template_keypoints;
+  for(int y = 0; y < sum_xy.size(); y++){
+      float xpt = template_xy[y][1];
+      float ypt = template_xy[y][0];
+      template_key.pt.x = xpt;
+      template_key.pt.y = ypt;
+      template_key.size = 7;
+      template_key.angle = -1;
+      float xangle = template_mean_vector[y][0];
+      float yangle = template_mean_vector[y][1];
+      float angle=acos(xangle/sqrt(xangle*xangle+yangle*yangle));
+      angle=angle*180.0/M_PI;
+      if(yangle<0)angle=360.0-angle;
+      template_key.angle = angle;
+      template_keypoints.push_back(template_key);
+  }
+  Ptr<FeatureDetector> detector = FeatureDetector::create("BRISK");
+  vector<KeyPoint> input_keypoints, template_keypoints;
+  detector->detect(input_img,input_keypoints);
+  detector->detect(template_img, template_keypoints);
+
+  for(int i = 0; i < input_keypoints.size(); i++){
+    input_keypoints[i].response = 0;
+    input_keypoints[i].angle = 0;
+    input_keypoints[i].octave = 0;
+    input_keypoints[i].size= 0;
+
+    cout << "input_keypoints" << endl;
+    cout << "pt = " << input_keypoints[i].pt << endl;
+    cout << "size = " << input_keypoints[i].size << endl;
+    cout << "angle = " << input_keypoints[i].angle << endl;
+    cout << "response = " << input_keypoints[i].response << endl;
+    cout << "octave = " << input_keypoints[i].octave << endl;
+
+  }
+  //cvtColor(input_img, gray_input, CV_BGR2GRAY);
+  //cvtColor(template_img, gray_template, CV_BGR2GRAY);
+  // DescriptorExtractorオブジェクトの生成
+  Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create("BRISK");
+  // 画像の特徴情報を格納するための変数
+  Mat input_descriptor;
+  // 特徴記述の計算を実行
+  extractor->compute(input_img, input_keypoints, input_descriptor);
+  // 画像の特徴情報を格納するための変数
+  Mat template_descriptor;
+  // 特徴記述の計算を実行
+  extractor->compute(template_img, template_keypoints, template_descriptor);
+
+  // DescriptorMatcherオブジェクトの生成
+  Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create("BruteForce-Hamming");
+  // 特徴点のマッチング情報を格納する変数
+  vector<DMatch> dmatch;
+  // クロスチェックする場合
+  vector<DMatch> match12, match21;
+  matcher->match(input_descriptor, template_descriptor, match12);
+  matcher->match(template_descriptor, input_descriptor, match21);
+  for (size_t i = 0; i < match12.size(); i++){
+    DMatch forward = match12[i];
+    DMatch backward = match21[forward.trainIdx];
+    if (backward.trainIdx == forward.queryIdx)
+     dmatch.push_back(forward);
+  }
+
+  // マッチング結果画像の作成
+  Mat result;
+  drawMatches(input_img, input_keypoints, template_img, template_keypoints, dmatch, result);
+  imwrite("input_img_out/matching.png", result);
+*/
   tf.featureMatching(input_img, template_img, keypoint_binary, sum_one_dimention_scanning, sum_xy, sum_boundary, sum_ave_keypoint, sum_min_label_word, sum_mean_vector);
 
   tf.graphPlot();
