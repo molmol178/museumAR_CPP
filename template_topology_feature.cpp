@@ -62,13 +62,23 @@ int main(int argc, char** argv){
   GaussianBlur(template_img, Gaussian_template, Size(7,7), 1.5, 1.5);
   //cvtColor(Gaussian_template, template_hsv, CV_BGR2HSV);
   cvtColor(Gaussian_template, template_hsv, CV_BGR2RGB);
+  imwrite("forslides/gaussian.tiff", Gaussian_template);
 
 
-  label_template_img = tf.template_splitRegion(tmp_range, template_hsv);
+
+  label_template_img = tf.template_splitRegion(tmp_range, Gaussian_template);
+
 
   imwrite("template_img_out/label_template_img.tiff", label_template_img);
+  imwrite("forslides/label_template_img.tiff", label_template_img);
+
+
 
   dst_data = tf.re_label(label_template_img);
+  changed_label_img = tf.writeDstData(dst_data);
+  imwrite("forslides/dst_data.tiff", changed_label_img);
+
+
 
   clean_label_img = tf.cleanLabelImage(dst_data, patch_size);
   changed_label_img = tf.writeDstData(clean_label_img);

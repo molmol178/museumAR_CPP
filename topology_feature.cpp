@@ -23,9 +23,9 @@ Mat TopologyFeature::template_splitRegion(int separate_range, Mat template_hsv){
   Mat v_value = Mat(template_y, template_x, CV_8UC1);
   vector<int> v_count_list(255, 0);
 
-  //split(template_hsv, planes);
-  //v_value = planes[2];
-  cvtColor(template_hsv, v_value, CV_RGB2GRAY);
+  split(template_hsv, planes);
+  v_value = planes[2];
+  //cvtColor(template_hsv, v_value, CV_RGB2GRAY);
 
 
   for(int y = 0; y < template_y; y++ ){
@@ -1007,7 +1007,7 @@ Mat TopologyFeature::writeFeaturePoint(Mat template_img, vector<vector<float> > 
     }
   }
   return template_img;
-  //imwrite("detect_feature_point.jpg",template_img);
+  imwrite("detect_feature_point.jpg",template_img);
 }
 
 /*
@@ -1071,10 +1071,10 @@ Mat TopologyFeature::inputCreateLabelImg(Mat input_hsv){
   Mat input_v_value = Mat(input_y, input_x, CV_8UC1);
   vector<int> input_v_hist(255, 0);
 
-  //split(input_hsv, planes);
-  //input_v_value = planes[2];
+  split(input_hsv, planes);
+  input_v_value = planes[2];
 
-  cvtColor(input_hsv, input_v_value, CV_RGB2GRAY);
+  //cvtColor(input_hsv, input_v_value, CV_RGB2GRAY);
 
 
   string template_v_list = "template_img_out/template_v_count_list.csv";
@@ -1278,7 +1278,7 @@ void TopologyFeature::featureMatching(Mat input_img, Mat template_img, vector<ve
       calc_min_label = template_min_label[j][0] - sum_min_label_word[sums][0];
       calc_simi_vector = (template_mean_vector[j][0] * sum_mean_vector[sums][0] + template_mean_vector[j][1] * sum_mean_vector[sums][1]) / (sqrt(pow(template_mean_vector[j][0],2.0) + pow(template_mean_vector[j][1], 2.0)) * sqrt(pow(sum_mean_vector[sums][0], 2.0) + pow(sum_mean_vector[sums][1], 2.0)));
 
-      if(calc_min_label >= -2 && calc_min_label <= 2){
+      if(calc_min_label >= -1 && calc_min_label <= 1){
         if(sum_ij[i][0] == j){
         //第一象限
         //if(sum_xy[j][1] < input_x / 2 && sum_xy[j][0] < input_y / 2 && template_yx[i][1] < template_x / 2 && template_yx[i][0] < template_y / 2){

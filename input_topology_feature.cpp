@@ -9,11 +9,13 @@
 #include <string>
 #include <sstream>
 #include "topology_feature.cpp"
+#include <time.h>
 
 using namespace std;
 using namespace cv;
 
 int main(int argc, char** argv){
+  clock_t start = clock(); //処理時間計測開始
   TopologyFeature tf;
 
   Mat Gaussian_input;
@@ -21,15 +23,16 @@ int main(int argc, char** argv){
   Mat label_input_img;
   Mat dst_data;
   Mat clean_label_img;
-  Mat changed_label_img;
+  //Mat changed_label_img;
   Mat input_img;
   Mat template_img;
   Mat last_label_img;
-  Mat last_changed_label_img;
+  //Mat last_changed_label_img;
 
  //コマンドライン引数
   int patch_size;
   int tmp_range;
+  /*
   if(argc == 3){
     input_img = imread(argv[1], CV_LOAD_IMAGE_COLOR);
     template_img = imread(argv[2], CV_LOAD_IMAGE_COLOR);
@@ -56,7 +59,11 @@ int main(int argc, char** argv){
     cout << "please set your input img at argv[1] and template imgat argv[2]" << endl;
     return 0;
   }
-
+  */
+    input_img = imread(argv[1], CV_LOAD_IMAGE_COLOR);
+    template_img = imread(argv[2], CV_LOAD_IMAGE_COLOR);
+     patch_size = 7;
+    tmp_range = 40;
 
 //featureDetection variables
   vector<vector<int> > sum_one_dimention_scanning;
@@ -76,9 +83,9 @@ int main(int argc, char** argv){
 
 
 
-  label_input_img = tf.inputCreateLabelImg(input_hsv);
+  label_input_img = tf.inputCreateLabelImg(Gaussian_input);
   //label_input_img = tf.template_splitRegion(tmp_range, input_hsv);
-  imwrite("input_img_out/input_label_input_img.tiff", label_input_img);
+  //imwrite("input_img_out/input_label_input_img.tiff", label_input_img);
 
   dst_data = tf.re_label(label_input_img);
   //unsigned short画像の領域をunsigned charのランダムな値で埋める
@@ -86,19 +93,19 @@ int main(int argc, char** argv){
 
 
   clean_label_img = tf.cleanLabelImage(dst_data, patch_size);
-  imwrite("input_img_out/input_clean_label_img.tiff", clean_label_img);
+  //imwrite("input_img_out/input_clean_label_img.tiff", clean_label_img);
   last_label_img = tf.remapLabel(clean_label_img);
 
-  ofstream test("input_test.csv");
-  test << last_label_img;
-  test << endl;
+ // ofstream test("input_test.csv");
+ // test << last_label_img;
+ // test << endl;
 
   //unsigned short画像の領域をunsigned charのランダムな値で埋める
   //ラベル画像確認用
-  changed_label_img = tf.writeDstData(clean_label_img);
-  imwrite("input_img_out/input_changed_label_img.tiff", changed_label_img);
-  last_changed_label_img = tf.writeDstData(last_label_img);
-  imwrite("input_img_out/input_last_changed_label_img.tiff", last_changed_label_img);
+ // changed_label_img = tf.writeDstData(clean_label_img);
+ // imwrite("input_img_out/input_changed_label_img.tiff", changed_label_img);
+ // last_changed_label_img = tf.writeDstData(last_label_img);
+ // imwrite("input_img_out/input_last_changed_label_img.tiff", last_changed_label_img);
 
   cout << "end label_img cleaning" << endl;
 
@@ -132,7 +139,7 @@ int main(int argc, char** argv){
   cout << "feature detection" << endl;
   sum_min_label_word = tf.featureDetection(patch_size,last_label_img, &sum_one_dimention_scanning, &sum_xy, &sum_boundary, &sum_ave_keypoint, &sum_mean_vector);
 
-
+/*
   string sum_one_d_scan_path = "input_img_out/input_sum_one_dimention_scanning.csv";
   tf.twod_intCsvWriter(sum_one_dimention_scanning, sum_one_d_scan_path);
 
@@ -150,15 +157,16 @@ int main(int argc, char** argv){
 
   string sum_mean_vector_path = "input_img_out/input_sum_mean_vector.csv";
   tf.twod_intCsvWriter(sum_mean_vector, sum_mean_vector_path);
-
+*/
   input_img = tf.writeFeaturePoint(input_img, &sum_xy, &sum_boundary);
-  imwrite("input_img_out/input_detect_feature_point.tiff", input_img);
+
+//  imwrite("input_img_out/input_detect_feature_point.tiff", input_img);
 
   keypoint_binary = tf.featureDescription(&sum_one_dimention_scanning,last_label_img);
-
+/*
   string key_bin_path = "input_img_out/input_keypoint_binary.csv";
   tf.twod_intCsvWriter(keypoint_binary, key_bin_path);
-
+*/
 /*
   KeyPoint input_key;
   vector<KeyPoint> input_keypoints;
@@ -256,6 +264,8 @@ int main(int argc, char** argv){
 */
   tf.featureMatching(input_img, template_img, keypoint_binary, sum_one_dimention_scanning, sum_xy, sum_boundary, sum_ave_keypoint, sum_min_label_word, sum_mean_vector);
 
-  tf.graphPlot();
+  clock_t end = clock(); //処理時間計測終了
+  cout << "duration = " << (double)(end - start) / CLOCKS_PER_SEC << "sec.\n";
+//  tf.graphPlot();
   return 0;
 }
