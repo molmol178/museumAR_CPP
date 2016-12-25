@@ -16,18 +16,18 @@ using namespace cv;
 templateとinputで同じ領域で別れるようにする
 ---------------------------------------------------------------------------------------------------
 */
-Mat TopologyFeature::template_splitRegion(int separate_range, Mat template_hsv){
+Mat TopologyFeature::template_splitRegion(int separate_range, Mat template_hsv, vector<int> v_count_list ,int flag){
+
   int template_x = template_hsv.cols;
   int template_y = template_hsv.rows;
   vector<Mat> planes;
   Mat v_value = Mat(template_y, template_x, CV_8UC1);
-  vector<int> v_count_list(255, 0);
+  //vector<int> v_count_list(255, 0);
 
   split(template_hsv, planes);
   v_value = planes[2];
   //cvtColor(template_hsv, v_value, CV_RGB2GRAY);
-
-
+/*
   for(int y = 0; y < template_y; y++ ){
     for (int x = 0; x < template_x; x++){
       int v = v_value.at<unsigned char>(y,x);
@@ -41,8 +41,7 @@ Mat TopologyFeature::template_splitRegion(int separate_range, Mat template_hsv){
   //for gnuplot
   string v_path = "graphPlot/template_v_count_list.csv";
   oned_vertical_intCsvWriter(v_count_list, v_path);
-
-
+*/
 
   vector<float> separation_list(255,0);
   int tmp_range = separate_range;
@@ -136,13 +135,19 @@ Mat TopologyFeature::template_splitRegion(int separate_range, Mat template_hsv){
     //cout << "--------------------calc end-----------------------" << endl;
     separation_list[i] = n;
   }
-
-  string sep_path = "template_img_out/template_separation_list.csv";
-  oned_floatCsvWriter(separation_list, sep_path);
-
-  //for gnuplot
-  string sep_vertical_path = "graphPlot/template_separation_list.csv";
-  oned_vertical_floatCsvWriter(separation_list, sep_vertical_path);
+  if (flag == 0){
+    string sep_path = "template_img_out/template_separation_list.csv";
+    oned_floatCsvWriter(separation_list, sep_path);
+    //for gnuplot
+    string sep_vertical_path = "graphPlot/template_separation_list.csv";
+    oned_vertical_floatCsvWriter(separation_list, sep_vertical_path);
+  }else if(flag == 1){
+    string sep_path = "input_img_out/input_separation_list.csv";
+    oned_floatCsvWriter(separation_list, sep_path);
+    //for gnuplot
+    string sep_vertical_path = "graphPlot/input_separation_list.csv";
+    oned_vertical_floatCsvWriter(separation_list, sep_vertical_path);
+  }
 
   vector<int> label_list(255,0);
   vector<float> tmp_sep_list;
@@ -208,10 +213,13 @@ Mat TopologyFeature::template_splitRegion(int separate_range, Mat template_hsv){
   oned_intCsvWriter(label_list, label_path);
 
   //for gnuplot
-  string label_vertical_path = "graphPlot/label_list.csv";
-  oned_vertical_intCsvWriter(label_list, label_vertical_path);
-
-
+  if(flag == 0){
+    string label_vertical_path = "graphPlot/label_list.csv";
+    oned_vertical_intCsvWriter(label_list, label_vertical_path);
+  }else if(flag == 1){
+    string label_vertical_path = "graphPlot/input_label_list.csv";
+    oned_vertical_intCsvWriter(label_list, label_vertical_path);
+  }
 
   Mat label_template_img = Mat(template_y, template_x, CV_8UC1);
 
@@ -223,15 +231,12 @@ Mat TopologyFeature::template_splitRegion(int separate_range, Mat template_hsv){
   return label_template_img;
 }
 
-
-
 /*
 ---------------------------------------------------------------------------------------------------
 再ラベリング
 １つの領域にユニークなラベル値が連番でつくようにする
 ---------------------------------------------------------------------------------------------------
 */
-
 Mat TopologyFeature::re_label(Mat label_template_img){
   int template_x = label_template_img.cols;
   int template_y = label_template_img.rows;
@@ -386,8 +391,6 @@ Mat TopologyFeature::cleanLabelImage(Mat dst_data, int patch_size){
   //cleaned_dst_data = writeDstData(dst_data);
   //imwrite("cleaned_dst_data.tiff" , cleaned_dst_data );
 
-
-
   //１回目のスキャン．左上から右下へ
   int tmp_dst_xy;
   int dst_up;
@@ -465,7 +468,6 @@ Mat TopologyFeature::cleanLabelImage(Mat dst_data, int patch_size){
     }
   }
 
-  cout << "input label create" << endl;
   return dst_data;
 }
 /*
@@ -496,18 +498,16 @@ Mat TopologyFeature::remapLabel(Mat label_img){
   }
 
   int max_list = *max_element(label_list.begin(), label_list.end());
-  cout << "max_list = " << max_list  <<endl;
+  cout << "max label_list = " << max_list  <<endl;
   vector<int> asc_index_label_list;
 
   while(max_list != 0){
     for(int i = 0; i < label_list.size(); i++){
       if(label_list[i] == max_list){
         asc_index_label_list.push_back(i);
-        cout << "get!!" << endl;
       }
       if(i == label_list.size() -1){
         max_list = max_list -1;
-        //cout <<  endl;
       }
     }
   }
@@ -520,7 +520,6 @@ Mat TopologyFeature::remapLabel(Mat label_img){
       }
     }
   }
-
   return remap_label_img;
 }
 
@@ -1059,8 +1058,7 @@ vector<vector<int> > TopologyFeature::featureDescription(vector<vector<int> > *s
 /*
 ---------------------------------------------------------------------------------------------------
 input画像用の関数
-templateのヒストグラムに合わせてinputのヒストグラムを偏差値処理
-templateのlabel_listを用いて，inputのラベル画像を作成
+templateのヒストグラムの平均値と標準偏差にinputが成るように正規化
 ---------------------------------------------------------------------------------------------------
 */
 Mat TopologyFeature::inputCreateLabelImg(Mat input_hsv){
@@ -1074,9 +1072,7 @@ Mat TopologyFeature::inputCreateLabelImg(Mat input_hsv){
   split(input_hsv, planes);
   input_v_value = planes[2];
 
-  //cvtColor(input_hsv, input_v_value, CV_RGB2GRAY);
-
-
+  //equalizeHist(input_v_value, input_v_value);
   string template_v_list = "template_img_out/template_v_count_list.csv";
   vector<int> template_v_hist;
   template_v_hist = oned_intCsvReader(template_v_list);
@@ -1143,6 +1139,12 @@ Mat TopologyFeature::inputCreateLabelImg(Mat input_hsv){
   }
   float input_std_deviation = sqrt(oi);
 
+  cout << "-----------------confirmation average and std_deviation-----------------------------" << endl;
+  cout << "===============std_deviation=============" << endl;
+  cout << "template = " << template_std_deviation << " input = " << input_std_deviation << endl;
+  cout << "===============average==============" << endl;
+  cout << "template = " << ave_t << " input = " << ave_i << endl;
+
   vector<int> correct_input_v_hist(255, 0);
   for(int iii = 0; iii < correct_input_v_hist.size(); iii++){
     float corre_input = template_std_deviation * ((input_v_hist[iii] - ave_i) / input_std_deviation) + ave_t;
@@ -1162,15 +1164,9 @@ Mat TopologyFeature::inputCreateLabelImg(Mat input_hsv){
 
   Mat label_input_img = Mat(input_y, input_x, CV_8UC1);
 
-  string template_label_path = "template_img_out/label_list.csv";
-  vector<int> template_labels;
-  template_labels = oned_intCsvReader(template_label_path);
-
-  for(int iy = 0; iy < input_y; iy++){
-    for(int ix = 0; ix < input_x; ix++){
-      label_input_img.at<unsigned char>(iy,ix) = template_labels[input_v_value.at<unsigned char>(iy,ix)];
-    }
-  }
+  int tmp_range = 20;
+  int flag = 1;
+  label_input_img = template_splitRegion(tmp_range, input_hsv, correct_input_v_hist, flag);
 
   return label_input_img;
 }
@@ -1183,9 +1179,6 @@ Mat TopologyFeature::inputCreateLabelImg(Mat input_hsv){
 */
 void TopologyFeature::featureMatching(Mat input_img, Mat template_img, vector<vector<int> > keypoint_binary, vector<vector<int> > sum_label_one_dimention_scanning, vector<vector<float> > sum_xy, vector<vector<int> > sum_boundary, vector<vector<double> > sum_ave_keypoint, vector<vector<int> > sum_min_label_word, vector<vector<int> > sum_mean_vector){
 //void TopologyFeature::featureMatching(Mat input_img, Mat template_img, vector<vector<int> > keypoint_binary, vector<vector<int> > sum_one_dimention_scanning, vector<vector<int> > sum_xy, vector<vector<int> > sum_boundary, vector<vector<double> > sum_ave_keypoint, vector<vector<int> > sum_min_label_word){
-
-
-
 
   string template_binary_path = "template_img_out/template_keypoint_binary.csv";
   vector<vector<int> > template_binary;
@@ -1325,6 +1318,7 @@ void TopologyFeature::featureMatching(Mat input_img, Mat template_img, vector<ve
 ---------------------------------------------------------------------------------------------------
 */
 int TopologyFeature::graphPlot(){
+  cout << "graph plotting ..." << endl;
 
   FILE *fp = popen("gnuplot", "w");
   if (fp == NULL)
@@ -1332,8 +1326,8 @@ int TopologyFeature::graphPlot(){
   fputs("set datafile separator ','\n", fp);
   fputs("set terminal pdf\n", fp);
   fputs("set xrange [0:255]\n", fp);
-  fputs("set yrange [0:30000]\n", fp);
-  fputs("set y2range [0:10]\n", fp);
+  fputs("set yrange [0:2000]\n", fp);
+  fputs("set y2range [0:8]\n", fp);
   fputs("set terminal png\n", fp);
   fputs("set ytics nomirror\n", fp);
   fputs("set y2tics\n", fp);
@@ -1343,12 +1337,35 @@ int TopologyFeature::graphPlot(){
   fputs("set key top left\n", fp);
   //fputs("set style fill solid border lc rgb 'red'\n", fp);
   fputs("set output 'graphPlot/template_separability.pdf'\n", fp);
-  fputs("plot 'graphPlot/template_v_count_list.csv' with boxes title 'histgram', 'graphPlot/template_separation_list.csv' with lines title 'separability * 10' axes x1y2,  'graphPlot/label_list.csv' with lines title 'label list' axes x1y2 ,20/pi with lines title '2 / pi * 10' axes x1y2 \n", fp);
+  fputs("plot 'graphPlot/template_v_count_list.csv' with boxes title 'histgram', 'graphPlot/template_separation_list.csv' with lines title 'separability' axes x1y2,  'graphPlot/label_list.csv' with lines title 'label list' axes x1y2 ,2/pi with lines title '2 / pi' axes x1y2 \n", fp);
   fputs("set output 'graphPlot/template_separability.png'\n", fp);
-  fputs("plot 'graphPlot/template_v_count_list.csv' with boxes title 'histgram', 'graphPlot/template_separation_list.csv' with lines title 'separability * 10' axes x1y2,  'graphPlot/label_list.csv' with lines title 'label list' axes x1y2 ,20/pi with lines title '2 / pi * 10' axes x1y2 \n", fp);
- 
+  fputs("plot 'graphPlot/template_v_count_list.csv' with boxes title 'histgram', 'graphPlot/template_separation_list.csv' with lines title 'separability' axes x1y2,  'graphPlot/label_list.csv' with lines title 'label list' axes x1y2 ,2/pi with lines title '2 / pi' axes x1y2 \n", fp);
   fflush(fp);
   pclose(fp);
+
+  FILE *fp1 = popen("gnuplot", "w");
+  if (fp1 == NULL)
+  return -1;
+  fputs("set datafile separator ','\n", fp1);
+  fputs("set terminal pdf\n", fp1);
+  fputs("set xrange [0:255]\n", fp1);
+  fputs("set yrange [0:2000]\n", fp1);
+  fputs("set y2range [0:8]\n", fp1);
+  fputs("set terminal png\n", fp1);
+  fputs("set ytics nomirror\n", fp1);
+  fputs("set y2tics\n", fp1);
+  fputs("set grid\n", fp1);
+  fputs("set title 'separability of input img'\n", fp1);
+  fputs("set ylabel 'histgram'\n", fp1);
+  fputs("set key top left\n", fp1);
+  //fputs("set style fill solid border lc rgb 'red'\n", fp1);
+  fputs("set output 'graphPlot/input_separability.pdf'\n", fp1);
+  fputs("plot 'graphPlot/input_v_count_list.csv' with boxes title 'histgram', 'graphPlot/input_separation_list.csv' with lines title 'separability' axes x1y2,  'graphPlot/input_label_list.csv' with lines title 'label list' axes x1y2 ,2/pi with lines title '2 / pi' axes x1y2 \n", fp1);
+  fputs("set output 'graphPlot/input_separability.png'\n", fp1);
+  fputs("plot 'graphPlot/input_v_count_list.csv' with boxes title 'histgram', 'graphPlot/input_separation_list.csv' with lines title 'separability' axes x1y2,  'graphPlot/input_label_list.csv' with lines title 'label list' axes x1y2 ,2/pi with lines title '2 / pi' axes x1y2 \n", fp1);
+  fflush(fp1);
+  pclose(fp1);
+
 
   FILE *fp2 = popen("gnuplot", "w");
   if (fp2 == NULL)
@@ -1356,7 +1373,7 @@ int TopologyFeature::graphPlot(){
   fputs("set datafile separator ','\n", fp2);
   fputs("set terminal pdf\n", fp2);
   fputs("set xrange [0:255]\n", fp2);
-  fputs("set yrange [0:30000]\n", fp2);
+  fputs("set yrange [0:2000]\n", fp2);
   fputs("set terminal png\n", fp2);
   fputs("set grid\n", fp2);
   fputs("set ylabel 'histgram'\n", fp2);
@@ -1367,10 +1384,8 @@ int TopologyFeature::graphPlot(){
   fputs("plot 'graphPlot/template_v_count_list.csv' with lines title 'template histgram', 'graphPlot/input_v_count_list.csv' with lines title 'input histgram', 'graphPlot/correct_input_v_count_list.csv' with lines title 'corrected input histgram' linecolor rgbcolor 'red' \n", fp2);
   fputs("set output 'graphPlot/input_histgrams.png'\n", fp2);
   fputs("plot 'graphPlot/template_v_count_list.csv' with lines title 'template histgram', 'graphPlot/input_v_count_list.csv' with lines title 'input histgram', 'graphPlot/correct_input_v_count_list.csv' with lines title 'corrected input histgram' linecolor rgbcolor 'red' \n", fp2);
- 
   fflush(fp2);
   pclose(fp2);
-  cout << "plotting ..." << endl;
   return 0;
 }
 
@@ -1526,7 +1541,8 @@ void TopologyFeature::oned_vertical_floatCsvWriter(vector<float> file, string fi
   ofstream ofs(filePath);
   float larger;
   for(int i = 0; i < file.size(); i++){
-      larger = file[i] *10;
+      //larger = file[i] *10;
+      larger = file[i];
       ofs << larger;
       ofs << endl;
   }

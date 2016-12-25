@@ -11,7 +11,7 @@ using namespace std;
 using namespace cv;
 class TopologyFeature{
   public:
-    Mat template_splitRegion(int tmp_range, Mat template_hsv);
+    Mat template_splitRegion(int tmp_range, Mat template_hsv, vector<int> v_count_list, int flag);
     Mat re_label(Mat label_template_img);
     Mat cleanLabelImage(Mat dst_data, int patch_size);
     Mat remapLabel(Mat label_img);

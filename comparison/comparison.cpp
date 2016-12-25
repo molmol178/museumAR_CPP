@@ -6,7 +6,7 @@
 #include <math.h>
 #include <vector>
 #include <time.h>
-#include "asift.cpp"
+//#include "asift.cpp"
 
 using namespace std;
 using namespace cv;
@@ -14,7 +14,7 @@ using namespace cv;
 int main(int argc, char** argv){
   clock_t start = clock(); //処理時間計測開始
 
-  ASiftDetector as;
+  //ASiftDetector as;
 
 
   Mat input_img = imread(argv[1], CV_LOAD_IMAGE_COLOR);
@@ -23,7 +23,7 @@ int main(int argc, char** argv){
   // SIFT・SURFモジュールの初期化
   //initModule_nonfree();
 
-  Ptr<FeatureDetector> detector = FeatureDetector::create("MSER");
+  Ptr<FeatureDetector> detector = FeatureDetector::create("BRISK");
   vector<KeyPoint> input_keypoints, template_keypoints;
   detector->detect(input_img,input_keypoints);
   detector->detect(template_img, template_keypoints);
@@ -31,7 +31,7 @@ int main(int argc, char** argv){
   //cvtColor(input_img, gray_input, CV_BGR2GRAY);
   //cvtColor(template_img, gray_template, CV_BGR2GRAY);
   // DescriptorExtractorオブジェクトの生成
-  Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create("SIFT");
+  Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create("BRISK");
   // 画像の特徴情報を格納するための変数
   Mat input_descriptor;
   // 特徴記述の計算を実行
@@ -42,9 +42,9 @@ int main(int argc, char** argv){
   extractor->compute(template_img, template_keypoints, template_descriptor);
 
   // DescriptorMatcherオブジェクトの生成
-  Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create("FlannBased");
+  //Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create("FlannBased");
   //Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create("BruteForce");
-  //Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create("BruteForce-Hamming");
+  Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create("BruteForce-Hamming");
   // 特徴点のマッチング情報を格納する変数
   vector<DMatch> dmatch;
   // クロスチェックする場合
