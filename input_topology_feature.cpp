@@ -60,8 +60,10 @@ int main(int argc, char** argv){
     return 0;
   }
   */
-  input_img = imread(argv[1], CV_LOAD_IMAGE_COLOR);
-  template_img = imread(argv[2], CV_LOAD_IMAGE_COLOR);
+  //input_img = imread(argv[1], CV_LOAD_IMAGE_COLOR);
+  //template_img = imread(argv[2], CV_LOAD_IMAGE_COLOR);
+  input_img = imread(argv[1], 0);
+  template_img = imread(argv[2], 0);
   patch_size = 7;
   tmp_range = 20;
 
@@ -76,7 +78,7 @@ int main(int argc, char** argv){
   vector<vector<int> > sum_min_label_word;
   vector<vector<int> > sum_mean_vector;
 
-
+/*
   GaussianBlur(input_img, Gaussian_input, Size(7, 7), 1.5, 1.5);
   //cvtColor(Gaussian_input, input_hsv, CV_BGR2HSV);
   cvtColor(Gaussian_input, input_hsv, CV_BGR2RGB);
@@ -98,7 +100,7 @@ int main(int argc, char** argv){
   imwrite("input_img_out/input_last_changed_label_img.tiff", last_changed_label_img);
 
   cout << "end label_img cleaning" << endl;
-/*
+
   Mat UC_last_label_img = Mat(input_img.rows, input_img.cols, CV_8UC1);
   int label_value;
   for(int y = 0; y < input_img.rows; y++){
@@ -108,8 +110,8 @@ int main(int argc, char** argv){
     }
   }
   imwrite("input_img_out/input_last_label_img.tiff", UC_last_label_img);
-*/
 
+*/
   /*
   int input_y = clean_label_img.rows;
   int input_x = clean_label_img.cols;
@@ -137,7 +139,7 @@ int main(int argc, char** argv){
  */
 
   cout << "feature detection" << endl;
-  sum_min_label_word = tf.featureDetection(patch_size,last_label_img, &sum_one_dimention_scanning, &sum_xy, &sum_boundary, &sum_ave_keypoint, &sum_mean_vector);
+  sum_min_label_word = tf.featureDetection(patch_size, input_img, &sum_one_dimention_scanning, &sum_xy, &sum_boundary, &sum_ave_keypoint, &sum_mean_vector);
   cout << "feature detection end " << endl;
 
 /*
@@ -163,11 +165,14 @@ int main(int argc, char** argv){
 
   imwrite("input_img_out/input_detect_feature_point.tiff", input_img);
 
-  keypoint_binary = tf.featureDescription(&sum_one_dimention_scanning,last_label_img);
+  cout << "feature description" << endl;
+  //keypoint_binary = tf.featureDescription(&sum_one_dimention_scanning,last_label_img);
+  keypoint_binary = tf.featureDescription(&sum_one_dimention_scanning, input_img);
 
   string key_bin_path = "input_img_out/input_keypoint_binary.csv";
   tf.twod_intCsvWriter(keypoint_binary, key_bin_path);
 
+  cout << "feature matching " << endl;
   tf.featureMatching(input_img, template_img, keypoint_binary, sum_one_dimention_scanning, sum_xy, sum_boundary, sum_ave_keypoint, sum_min_label_word, sum_mean_vector);
 
 

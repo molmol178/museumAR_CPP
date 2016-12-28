@@ -30,13 +30,15 @@ int main(int argc, char** argv){
   int patch_size;
   int tmp_range;
   if(argc == 3){
-    template_img = imread(argv[1], CV_LOAD_IMAGE_COLOR);
+    //template_img = imread(argv[1], CV_LOAD_IMAGE_COLOR);
+    template_img = imread(argv[1], 0);
     patch_size = atoi(argv[2]);
     cout << "patch_size = "<<patch_size <<endl;
     cout << "please set argv[3] about tmp_range. defalt is 40" << endl;
     tmp_range = 20;
   }else if(argc == 4){
-    template_img = imread(argv[1], CV_LOAD_IMAGE_COLOR);
+    //template_img = imread(argv[1], CV_LOAD_IMAGE_COLOR);
+    template_img = imread(argv[1], 0);
     patch_size = atoi(argv[2]);
     cout << "patch_size = "<<patch_size <<endl;
     tmp_range = atoi(argv[3]);
@@ -45,7 +47,8 @@ int main(int argc, char** argv){
     cout << "please set your template img." << endl;
     return 0;
   }else{
-    template_img = imread(argv[1], CV_LOAD_IMAGE_COLOR);
+    //template_img = imread(argv[1], CV_LOAD_IMAGE_COLOR);
+    template_img = imread(argv[1], 0);
     cout << "please set argv[2] about patch size. defalt is 7" <<endl;
     patch_size = 7;
     cout << "please set argv[3] about tmp_range. defalt is 40" << endl;
@@ -62,7 +65,7 @@ int main(int argc, char** argv){
   vector<vector<int> > keypoint_binary;
   vector<vector<int> > sum_min_label_word;
   vector<vector<int> > sum_mean_vector;
-
+/*
   GaussianBlur(template_img, Gaussian_template, Size(7,7), 1.5, 1.5);
   //cvtColor(Gaussian_template, template_hsv, CV_BGR2HSV);
   cvtColor(Gaussian_template, template_hsv, CV_BGR2RGB);
@@ -102,7 +105,7 @@ int main(int argc, char** argv){
 
   dst_data = tf.re_label(label_template_img);
   changed_label_img = tf.writeDstData(dst_data);
-  imwrite("forslides/dst_data.tiff", changed_label_img);
+  //imwrite("forslides/dst_data.tiff", changed_label_img);
 
   clean_label_img = tf.cleanLabelImage(dst_data, patch_size);
   changed_label_img = tf.writeDstData(clean_label_img);
@@ -113,7 +116,7 @@ int main(int argc, char** argv){
   imwrite("template_img_out/template_clean_label_img.tiff", clean_label_img);
   imwrite("template_img_out/template_changed_label_img.tiff", changed_label_img);
   imwrite("template_img_out/template_last_changed_label_img.tiff", last_changed_label_img);
-/*
+
   Mat UC_last_label_img = Mat(template_y, template_x, CV_8UC1);
   int label_value;
   for(int y = 0; y < template_y; y++){
@@ -123,12 +126,15 @@ int main(int argc, char** argv){
     }
   }
   imwrite("template_img_out/template_last_label_img.tiff", UC_last_label_img);
-*/
+
 
   cout << "end label_img cleaning" << endl;
-
+*/
   cout << "feature detection" << endl;
-  sum_min_label_word = tf.featureDetection(patch_size,last_label_img, &sum_one_dimention_scanning, &sum_xy, &sum_boundary, &sum_ave_keypoint, &sum_mean_vector);
+  //sum_min_label_word = tf.featureDetection(patch_size,last_label_img, &sum_one_dimention_scanning, &sum_xy, &sum_boundary, &sum_ave_keypoint, &sum_mean_vector);
+  sum_min_label_word = tf.featureDetection(patch_size,template_img, &sum_one_dimention_scanning, &sum_xy, &sum_boundary, &sum_ave_keypoint, &sum_mean_vector);
+
+
 
   /*
   cout << "===============================================================" << endl;
@@ -161,7 +167,10 @@ int main(int argc, char** argv){
   imwrite("template_img_out/template_detect_feature_point.tiff", template_img);
 
   cout << "description..." << endl;
-  keypoint_binary = tf.featureDescription(&sum_one_dimention_scanning, last_label_img);
+  //keypoint_binary = tf.featureDescription(&sum_one_dimention_scanning, last_label_img);
+  keypoint_binary = tf.featureDescription(&sum_one_dimention_scanning, template_img);
+
+
 
   clock_t end = clock(); //処理時間計測終了
   cout << "duration = " << (double)(end - start) / CLOCKS_PER_SEC << "sec.\n";
