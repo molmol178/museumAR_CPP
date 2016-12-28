@@ -161,9 +161,9 @@ int main(int argc, char** argv){
   string sum_mean_vector_path = "input_img_out/input_sum_mean_vector.csv";
   tf.twod_intCsvWriter(sum_mean_vector, sum_mean_vector_path);
 */
-  input_img = tf.writeFeaturePoint(input_img, &sum_xy, &sum_boundary);
+  string writtenFeatureImage_fp = "input_img_out/input_detect_feature_point.tiff";
+  tf.writeFeaturePoint(input_img, &sum_xy, &sum_boundary, writtenFeatureImage_fp);
 
-  imwrite("input_img_out/input_detect_feature_point.tiff", input_img);
 
   cout << "feature description" << endl;
   //keypoint_binary = tf.featureDescription(&sum_one_dimention_scanning,last_label_img);

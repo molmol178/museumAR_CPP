@@ -163,8 +163,8 @@ int main(int argc, char** argv){
   */
 
   cout << "write feature points..." << endl;
-  template_img = tf.writeFeaturePoint(template_img, &sum_xy, &sum_boundary);
-  imwrite("template_img_out/template_detect_feature_point.tiff", template_img);
+  string writeFeatureImage_fp = "template_img_out/template_detect_feature_point.tiff";
+  tf.writeFeaturePoint(template_img, &sum_xy, &sum_boundary, writeFeatureImage_fp);
 
   cout << "description..." << endl;
   //keypoint_binary = tf.featureDescription(&sum_one_dimention_scanning, last_label_img);

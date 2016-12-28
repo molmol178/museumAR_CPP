@@ -979,10 +979,14 @@ vector<vector<int> > TopologyFeature::saveFeaturePoint (int x, int y,int min_lab
 ---------------------------------------------------------------------------------------------------
 */
 
-Mat TopologyFeature::writeFeaturePoint(Mat template_img, vector<vector<float> > *sum_xy, vector<vector<int> > *sum_boundary){
+void TopologyFeature::writeFeaturePoint(Mat template_img, vector<vector<float> > *sum_xy, vector<vector<int> > *sum_boundary, string filepath){
 
   vector<vector<float> > this_sum_xy = *sum_xy;
   vector<vector<int> > this_sum_boundary = *sum_boundary;
+  //Mat writtenFeature = Mat(template_img.rows, template_img.cols, CV_8UC3);
+  //vector<Mat> planes;
+  //split(writtenFeature, planes);
+  //planes[0] = template_img;
 
   for(int i = 0; i < this_sum_xy.size(); i++){
     vector<float> center = this_sum_xy[i];
@@ -996,22 +1000,21 @@ Mat TopologyFeature::writeFeaturePoint(Mat template_img, vector<vector<float> > 
     }
 
     if(this_sum_boundary[i][0] == 2){
-      template_img.at<unsigned char>(center[0],center[1]) = 0;
+      template_img.at<unsigned char>(center[0],center[1]) = 150;
       //template_img.at<Vec3b>(center[0],center[1])[0] = 255;
       //template_img.at<Vec3b>(center[0],center[1])[1] = 0;
       //template_img.at<Vec3b>(center[0],center[1])[2] = 0;
-      rectangle(template_img, Point(top_left[1],top_left[0]), Point(bottom_right[1],bottom_right[0]), Scalar(0), 1);
+      rectangle(template_img, Point(top_left[1],top_left[0]), Point(bottom_right[1],bottom_right[0]), Scalar(150), 1);
     }
     else if(this_sum_boundary[i][0] == 3){
-      template_img.at<unsigned char>(center[0],center[1]) = 100;
+      template_img.at<unsigned char>(center[0],center[1]) = 70;
       //template_img.at<Vec3b>(center[0],center[1])[0] = 0;
       //template_img.at<Vec3b>(center[0],center[1])[1] = 255;
       //template_img.at<Vec3b>(center[0],center[1])[2] = 0;
-      rectangle(template_img, Point(top_left[1],top_left[0]), Point(bottom_right[1],bottom_right[0]), Scalar(100), 1);
+      rectangle(template_img, Point(top_left[1],top_left[0]), Point(bottom_right[1],bottom_right[0]), Scalar(70), 1);
     }
   }
-  return template_img;
-  imwrite("detect_feature_point.jpg",template_img);
+  imwrite(filepath, template_img);
 }
 
 /*
@@ -1245,25 +1248,23 @@ void TopologyFeature::featureMatching(Mat input_img, Mat template_img, vector<ve
       //cout << "calc_simi_vector = " << calc_simi_vector << endl;
       //if(calc_simi_vector >= 0.5){
       if(h == 0){
-        /*
         tmp_ij.push_back(i);
         tmp_ij.push_back(j);
         sum_ij.push_back(tmp_ij);
         tmp_ij.erase(tmp_ij.begin(), tmp_ij.end());
-        */
         //circle(sum_img, Point(input_x + template_yx[i][1], template_yx[i][0]), 2, Scalar(0,200,255), 1, 4);
         //circle(sum_img, Point(sum_xy[j][1], sum_xy[j][0]), 2, Scalar(0,200,255), 1, 4);
         //line(sum_img, Point(input_x + template_yx[i][1], template_yx[i][0]), Point(sum_xy[j][1], sum_xy[j][0]), Scalar(0,200,255), 1, 4 );
-        circle(sum_img, Point(input_x + template_yx[i][1], template_yx[i][0]), 2, Scalar(0,200,255), 1, 4);
-        circle(sum_img, Point(sum_xy[j][1], sum_xy[j][0]), 2, Scalar(0,200,255), 1, 4);
-        line(sum_img, Point(input_x + template_yx[i][1], template_yx[i][0]), Point(sum_xy[j][1], sum_xy[j][0]), Scalar(0,200,255), 1, 4 );
+        //circle(sum_img, Point(input_x + template_yx[i][1], template_yx[i][0]), 2, Scalar(130), 1, 4);
+        //circle(sum_img, Point(sum_xy[j][1], sum_xy[j][0]), 2, Scalar(130), 1, 4);
+        //line(sum_img, Point(input_x + template_yx[i][1], template_yx[i][0]), Point(sum_xy[j][1], sum_xy[j][0]), Scalar(130), 1, 4 );
 
       }
       h = 0;
     }
   }
 
-/*
+
   //クロスマッチング
   int sums;
   h = 0;
@@ -1286,7 +1287,8 @@ void TopologyFeature::featureMatching(Mat input_img, Mat template_img, vector<ve
       calc_min_label = template_min_label[j][0] - sum_min_label_word[sums][0];
       calc_simi_vector = (template_mean_vector[j][0] * sum_mean_vector[sums][0] + template_mean_vector[j][1] * sum_mean_vector[sums][1]) / (sqrt(pow(template_mean_vector[j][0],2.0) + pow(template_mean_vector[j][1], 2.0)) * sqrt(pow(sum_mean_vector[sums][0], 2.0) + pow(sum_mean_vector[sums][1], 2.0)));
 
-      if(calc_min_label >= -1 && calc_min_label <= 1){
+      //cout << "calc_simi_vector = " << calc_simi_vector << endl;
+      if(calc_simi_vector >= 0.9){
         if(sum_ij[i][0] == j){
         //第一象限
         //if(sum_xy[j][1] < input_x / 2 && sum_xy[j][0] < input_y / 2 && template_yx[i][1] < template_x / 2 && template_yx[i][0] < template_y / 2){
@@ -1294,7 +1296,6 @@ void TopologyFeature::featureMatching(Mat input_img, Mat template_img, vector<ve
         circle(sum_img, Point(sum_xy[sums][1], sum_xy[sums][0]), 2, Scalar(200,0,255), 1, 4);
         line(sum_img, Point(input_x + template_yx[j][1], template_yx[j][0]), Point(sum_xy[sums][1], sum_xy[sums][0]), Scalar(200,0,255), 1, 4 );
         //}
-        */
 /*
         //第二象限
         if(sum_xy[j][1] > input_x / 2 && sum_xy[j][0] < input_y / 2 && template_yx[i][1] > template_x / 2 && template_yx[i][0] < template_y / 2){
@@ -1317,15 +1318,12 @@ void TopologyFeature::featureMatching(Mat input_img, Mat template_img, vector<ve
         line(sum_img, Point(input_x + template_yx[i][1], template_yx[i][0]), Point(sum_xy[j][1], sum_xy[j][0]), Scalar(0,255,200), 1, 4 );
         }
         */
-        /*
         }
       }
       h = 0;
     }
   }
-  */
   imwrite("input_img_out/sum_img.tiff", sum_img);
-
 }
 
 
