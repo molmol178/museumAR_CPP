@@ -285,6 +285,6 @@ int main(int argc, char** argv){
 */
   clock_t end = clock(); //処理時間計測終了
   cout << "duration = " << (double)(end - start) / CLOCKS_PER_SEC << "sec.\n";
-  tf.graphPlot();
+  //tf.graphPlot();
   return 0;
 }

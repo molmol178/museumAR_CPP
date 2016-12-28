@@ -1222,31 +1222,27 @@ void TopologyFeature::featureMatching(Mat input_img, Mat template_img, vector<ve
   Mat sum_img = Mat(input_y, input_x + template_x, CV_8UC3);
   hconcat(input_img, template_img, sum_img);
   int h = 0;
-  double calc_ave = 0;
-  int calc_boundary = 0;
-  int calc_min_label = 0;
-  double calc_simi_vector = 0.0;
+  //double calc_ave = 0;
+  //int calc_boundary = 0;
+  //int calc_min_label = 0;
+  //double calc_simi_vector = 0.0;
   vector<int> tmp_ij;
   vector<vector<int> > sum_ij;
+  cout << "first matching" << endl;
   for(int i = 0; i < template_binary.size()-1; i++){
     for(int j = 0; j< keypoint_binary.size(); j++){
       for(int k = 0; k < template_binary[0].size(); k++){
         h += template_binary[i][k] - keypoint_binary[j][k];
         if(h != 0){
-          h = 100;
+          //h = 100;
+          break;
         }
       }
-      calc_ave = template_ave[i][0] - sum_ave_keypoint[j][0];
-      calc_boundary = template_boundary[i][0] - sum_boundary[j][0];
-      calc_min_label = template_min_label[i][0] - sum_min_label_word[j][0];
-      calc_simi_vector = (template_mean_vector[i][0] * sum_mean_vector[j][0] + template_mean_vector[i][1] * sum_mean_vector[j][1]) / (sqrt(pow(template_mean_vector[i][0],2.0) + pow(template_mean_vector[i][1], 2.0)) * sqrt(pow(sum_mean_vector[j][0], 2.0) + pow(sum_mean_vector[j][1], 2.0)));
+      //calc_ave = template_ave[i][0] - sum_ave_keypoint[j][0];
+      //calc_boundary = template_boundary[i][0] - sum_boundary[j][0];
+      //calc_min_label = template_min_label[i][0] - sum_min_label_word[j][0];
+      //calc_simi_vector = (template_mean_vector[i][0] * sum_mean_vector[j][0] + template_mean_vector[i][1] * sum_mean_vector[j][1]) / (sqrt(pow(template_mean_vector[i][0],2.0) + pow(template_mean_vector[i][1], 2.0)) * sqrt(pow(sum_mean_vector[j][0], 2.0) + pow(sum_mean_vector[j][1], 2.0)));
 
-      //cout << "calc_min_label = " << calc_min_label << endl;
-
-      //if(h == 0 && calc_ave == 0 && boundary == 0 && calc_min_label == 0){
-      //if(boundary == 0 && calc_min_label == 0){
-      //cout << "calc_simi_vector = " << calc_simi_vector << endl;
-      //if(calc_simi_vector >= 0.5){
       if(h == 0){
         tmp_ij.push_back(i);
         tmp_ij.push_back(j);
@@ -1267,34 +1263,37 @@ void TopologyFeature::featureMatching(Mat input_img, Mat template_img, vector<ve
 
   //クロスマッチング
   int sums;
-  h = 0;
-  calc_ave = 0;
-  calc_boundary = 0;
-  calc_min_label = 0;
-  calc_simi_vector = 0.0;
+  //h = 0;
+  //calc_ave = 0;
+  //calc_boundary = 0;
+  //calc_min_label = 0;
+  double calc_simi_vector = 0.0;
 
+  cout << "second matching " << endl;
   for(int i = 0; i < sum_ij.size(); i++){
     sums = sum_ij[i][1];
     for(int j = 0; j < template_binary.size()-1; j++){
+      /*
       for(int k = 0; k < template_binary[0].size(); k++){
         h += template_binary[j][k] - keypoint_binary[sums][k];
         if(h != 0){
           h = 100;
         }
       }
-      calc_ave = template_ave[j][0] - sum_ave_keypoint[sums][0];
-      calc_boundary = template_boundary[j][0] - sum_boundary[sums][0];
-      calc_min_label = template_min_label[j][0] - sum_min_label_word[sums][0];
+      */
+      //calc_ave = template_ave[j][0] - sum_ave_keypoint[sums][0];
+      //calc_boundary = template_boundary[j][0] - sum_boundary[sums][0];
+      //calc_min_label = template_min_label[j][0] - sum_min_label_word[sums][0];
       calc_simi_vector = (template_mean_vector[j][0] * sum_mean_vector[sums][0] + template_mean_vector[j][1] * sum_mean_vector[sums][1]) / (sqrt(pow(template_mean_vector[j][0],2.0) + pow(template_mean_vector[j][1], 2.0)) * sqrt(pow(sum_mean_vector[sums][0], 2.0) + pow(sum_mean_vector[sums][1], 2.0)));
 
       //cout << "calc_simi_vector = " << calc_simi_vector << endl;
-      if(calc_simi_vector >= 0.9){
-        if(sum_ij[i][0] == j){
+      if(sum_ij[i][0] == j){
+        if(calc_simi_vector >= 0.9){
         //第一象限
         //if(sum_xy[j][1] < input_x / 2 && sum_xy[j][0] < input_y / 2 && template_yx[i][1] < template_x / 2 && template_yx[i][0] < template_y / 2){
-        circle(sum_img, Point(input_x + template_yx[j][1], template_yx[j][0]), 2, Scalar(200,0,255), 1, 4);
-        circle(sum_img, Point(sum_xy[sums][1], sum_xy[sums][0]), 2, Scalar(200,0,255), 1, 4);
-        line(sum_img, Point(input_x + template_yx[j][1], template_yx[j][0]), Point(sum_xy[sums][1], sum_xy[sums][0]), Scalar(200,0,255), 1, 4 );
+        circle(sum_img, Point(input_x + template_yx[j][1], template_yx[j][0]), 2, Scalar(200), 1, 4);
+        circle(sum_img, Point(sum_xy[sums][1], sum_xy[sums][0]), 2, Scalar(200), 1, 4);
+        line(sum_img, Point(input_x + template_yx[j][1], template_yx[j][0]), Point(sum_xy[sums][1], sum_xy[sums][0]), Scalar(200), 1, 4 );
         //}
 /*
         //第二象限
@@ -1320,7 +1319,7 @@ void TopologyFeature::featureMatching(Mat input_img, Mat template_img, vector<ve
         */
         }
       }
-      h = 0;
+      //h = 0;
     }
   }
   imwrite("input_img_out/sum_img.tiff", sum_img);

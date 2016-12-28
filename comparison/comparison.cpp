@@ -19,11 +19,14 @@ int main(int argc, char** argv){
 
   Mat input_img = imread(argv[1], CV_LOAD_IMAGE_COLOR);
   Mat template_img = imread(argv[2], CV_LOAD_IMAGE_COLOR);
+  //Mat input_img = imread(argv[1], 0);
+  //Mat template_img = imread(argv[2], 0);
+
 
   // SIFT・SURFモジュールの初期化
   //initModule_nonfree();
 
-  Ptr<FeatureDetector> detector = FeatureDetector::create("BRISK");
+  Ptr<FeatureDetector> detector = FeatureDetector::create("ORB");
   vector<KeyPoint> input_keypoints, template_keypoints;
   detector->detect(input_img,input_keypoints);
   detector->detect(template_img, template_keypoints);
@@ -31,7 +34,7 @@ int main(int argc, char** argv){
   //cvtColor(input_img, gray_input, CV_BGR2GRAY);
   //cvtColor(template_img, gray_template, CV_BGR2GRAY);
   // DescriptorExtractorオブジェクトの生成
-  Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create("BRISK");
+  Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create("ORB");
   // 画像の特徴情報を格納するための変数
   Mat input_descriptor;
   // 特徴記述の計算を実行
