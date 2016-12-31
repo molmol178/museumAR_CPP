@@ -1269,6 +1269,16 @@ void TopologyFeature::featureMatching(Mat input_img, Mat template_img, vector<ve
   //calc_min_label = 0;
   double calc_simi_vector = 0.0;
 
+  //inlier and outlier matching
+  DMatch tmp_goodMatch;
+  vector<DMatch> goodMatch;
+
+  //match points
+  KeyPoint tmp_template_pt;
+  KeyPoint tmp_input_pt;
+  vector<Point2f> template_pt;
+  vector<Point2f> input_pt;
+
   cout << "second matching " << endl;
   for(int i = 0; i < sum_ij.size(); i++){
     sums = sum_ij[i][1];
@@ -1286,45 +1296,59 @@ void TopologyFeature::featureMatching(Mat input_img, Mat template_img, vector<ve
       //calc_min_label = template_min_label[j][0] - sum_min_label_word[sums][0];
       calc_simi_vector = (template_mean_vector[j][0] * sum_mean_vector[sums][0] + template_mean_vector[j][1] * sum_mean_vector[sums][1]) / (sqrt(pow(template_mean_vector[j][0],2.0) + pow(template_mean_vector[j][1], 2.0)) * sqrt(pow(sum_mean_vector[sums][0], 2.0) + pow(sum_mean_vector[sums][1], 2.0)));
 
-      //cout << "calc_simi_vector = " << calc_simi_vector << endl;
       if(sum_ij[i][0] == j){
         if(calc_simi_vector >= 0.9){
-        //第一象限
-        //if(sum_xy[j][1] < input_x / 2 && sum_xy[j][0] < input_y / 2 && template_yx[i][1] < template_x / 2 && template_yx[i][0] < template_y / 2){
         circle(sum_img, Point(input_x + template_yx[j][1], template_yx[j][0]), 2, Scalar(200), 1, 4);
         circle(sum_img, Point(sum_xy[sums][1], sum_xy[sums][0]), 2, Scalar(200), 1, 4);
         line(sum_img, Point(input_x + template_yx[j][1], template_yx[j][0]), Point(sum_xy[sums][1], sum_xy[sums][0]), Scalar(200), 1, 4 );
-        //}
-/*
-        //第二象限
-        if(sum_xy[j][1] > input_x / 2 && sum_xy[j][0] < input_y / 2 && template_yx[i][1] > template_x / 2 && template_yx[i][0] < template_y / 2){
-        circle(sum_img, Point(input_x + template_yx[i][1], template_yx[i][0]), 2, Scalar(0,200,255), 1, 4);
-        circle(sum_img, Point(sum_xy[j][1], sum_xy[j][0]), 2, Scalar(0,200,255), 1, 4);
-        line(sum_img, Point(input_x + template_yx[i][1], template_yx[i][0]), Point(sum_xy[j][1], sum_xy[j][0]), Scalar(0,200,255), 1, 4 );
-        }
+        //Homography matrix estimation
+        tmp_template_pt.pt.x = template_yx[j][1];
+        tmp_template_pt.pt.y = template_yx[j][0];
+        template_pt.push_back(tmp_template_pt.pt);
 
-        //第三象限
-        if(sum_xy[j][1] < input_x / 2 && sum_xy[j][0] > input_y / 2 && template_yx[i][1] < template_x / 2 && template_yx[i][0] > template_y / 2){
-        circle(sum_img, Point(input_x + template_yx[i][1], template_yx[i][0]), 2, Scalar(255,0,200), 1, 4);
-        circle(sum_img, Point(sum_xy[j][1], sum_xy[j][0]), 2, Scalar(255,0,200), 1, 4);
-        line(sum_img, Point(input_x + template_yx[i][1], template_yx[i][0]), Point(sum_xy[j][1], sum_xy[j][0]), Scalar(255,0,200), 1, 4 );
-        }
+        tmp_input_pt.pt.x = sum_xy[sums][1];
+        tmp_input_pt.pt.y = sum_xy[sums][0];
+        input_pt.push_back(tmp_input_pt.pt);
 
-        //第四象限
-         if(sum_xy[j][1] > input_x / 2 && sum_xy[j][0] > input_y / 2 && template_yx[i][1] > template_x / 2 && template_yx[i][0] > template_y / 2){
-        circle(sum_img, Point(input_x + template_yx[i][1], template_yx[i][0]), 2, Scalar(0,255,200), 1, 4);
-        circle(sum_img, Point(sum_xy[j][1], sum_xy[j][0]), 2, Scalar(0,255,200), 1, 4);
-        line(sum_img, Point(input_x + template_yx[i][1], template_yx[i][0]), Point(sum_xy[j][1], sum_xy[j][0]), Scalar(0,255,200), 1, 4 );
-        }
-        */
+        //tmp_goodMatch.queryIdx = (int)template_yx[j][1];
+        //tmp_goodMatch.trainIdx = (int)sum_xy[sums][1];
+        goodMatch.push_back(tmp_goodMatch);
         }
       }
-      //h = 0;
     }
   }
-  imwrite("input_img_out/sum_img.tiff", sum_img);
+  imwrite("input_img_out/all_match_sum_img.tiff", sum_img);
+  calc_Homography(template_pt, input_pt, goodMatch);
 }
+/*
+---------------------------------------------------------------------------------------------------
+Homographyを推定してマッチング率を算出（RANSACを使用）
+---------------------------------------------------------------------------------------------------
+*/
+void TopologyFeature::calc_Homography(vector<Point2f> template_pt, vector<Point2f> input_pt, vector<DMatch> goodMatch){
 
+  Mat masks;
+  Mat H = findHomography(template_pt, input_pt, masks, RANSAC, 3);
+  cout << "homography = " << H <<endl;
+
+  //while(true){
+    //imshow("goodmatch", goodMatch);
+  //}
+  //RANSACで使われた対応点のみ抽出
+  vector<DMatch> inlinerMatch;
+  for (size_t i = 0; i < masks.rows; ++i) {
+    uchar *inliner = masks.ptr<uchar>(i);
+    if (inliner[0] == 1) {
+      inlinerMatch.push_back(goodMatch[i]);
+    }
+  }
+  cout << "inlinerMatch count = "<< inlinerMatch.size() <<endl;
+  cout << "allMatch count = " << goodMatch.size() << endl;
+  double inliner = inlinerMatch.size();
+  double good = goodMatch.size();
+  double matching_ratio = inliner / good;
+  cout << "matching ratio = " << matching_ratio << endl;
+}
 
 /*
 ---------------------------------------------------------------------------------------------------
