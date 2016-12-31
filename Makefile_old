@@ -1,0 +1,28 @@
+CC := g++
+
+
+all: template input
+
+topology: topology_feature.cpp
+	g++ -I/usr/local/Cellar/opencv3/3.0.0/include -L/usr/local/Cellar/opencv3/3.0.0/lib `pkg-config --cflags opencv` `pkg-config --libs opencv` -lopencv_imgcodecs topology_feature.cpp -o topology
+
+template: template_topology_feature.cpp
+	g++ -I/usr/local/Cellar/opencv3/3.0.0/include -L/usr/local/Cellar/opencv3/3.0.0/lib `pkg-config --cflags opencv` `pkg-config --libs opencv` -lopencv_imgcodecs template_topology_feature.cpp -o template
+
+
+input: input_topology_feature.cpp
+	g++ -I/usr/local/Cellar/opencv3/3.0.0/include -L/usr/local/Cellar/opencv3/3.0.0/lib `pkg-config --cflags opencv` `pkg-config --libs opencv` -lopencv_imgcodecs input_topology_feature.cpp -o input
+
+debug_template: template_topology_feature.cpp
+	g++ -I/usr/local/Cellar/opencv3/3.0.0/include -L/usr/local/Cellar/opencv3/3.0.0/lib `pkg-config --cflags opencv` `pkg-config --libs opencv` -lopencv_imgcodecs template_topology_feature.cpp -o template -g -O0
+
+
+debug_input: input_topology_feature.cpp
+	g++ -I/usr/local/Cellar/opencv3/3.0.0/include -L/usr/local/Cellar/opencv3/3.0.0/lib `pkg-config --cflags opencv` `pkg-config --libs opencv` -lopencv_imgcodecs input_topology_feature.cpp -o input -g -O0
+
+
+
+clean:
+	rm -f *.o template input
+
+
