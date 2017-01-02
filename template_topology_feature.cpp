@@ -1,8 +1,5 @@
 #define _USE_MATH_DEFINES
 #include <iostream>
-#include "opencv2/opencv.hpp"
-#include "opencv2/core/core.hpp"
-#include "opencv2/highgui/highgui.hpp"
 #include <math.h>
 #include <vector>
 #include <fstream>
@@ -11,11 +8,11 @@
 
 using namespace std;
 using namespace cv;
+using namespace TopologyFeature;
 
 int main(int argc, char** argv){
   clock_t start = clock(); //処理時間計測開始
 
-  TopologyFeature tf;
   Mat Gaussian_template;
   Mat template_hsv;
   Mat label_template_img;
@@ -90,28 +87,28 @@ int main(int argc, char** argv){
   }
 
   string v_count_path = "template_img_out/template_v_count_list.csv";
-  tf.oned_intCsvWriter(v_count_list, v_count_path);
+  oned_intCsvWriter(v_count_list, v_count_path);
 
   //for gnuplot
   string v_path = "graphPlot/template_v_count_list.csv";
-  tf.oned_vertical_intCsvWriter(v_count_list, v_path);
+  oned_vertical_intCsvWriter(v_count_list, v_path);
 //ここまで--------------------------------------------------------------------------
 
   int flag = 0;
-  label_template_img = tf.template_splitRegion(tmp_range, template_hsv, v_count_list, flag);
+  label_template_img = template_splitRegion(tmp_range, template_hsv, v_count_list, flag);
 
   imwrite("template_img_out/label_template_img.tiff", label_template_img);
   //imwrite("forslides/label_template_img.tiff", label_template_img);
 
-  dst_data = tf.re_label(label_template_img);
-  changed_label_img = tf.writeDstData(dst_data);
+  dst_data = re_label(label_template_img);
+  changed_label_img = writeDstData(dst_data);
   //imwrite("forslides/dst_data.tiff", changed_label_img);
 
-  clean_label_img = tf.cleanLabelImage(dst_data, patch_size);
-  changed_label_img = tf.writeDstData(clean_label_img);
+  clean_label_img = cleanLabelImage(dst_data, patch_size);
+  changed_label_img = writeDstData(clean_label_img);
 
-  last_label_img = tf.remapLabel(clean_label_img);
-  last_changed_label_img = tf.writeDstData(last_label_img);
+  last_label_img = remapLabel(clean_label_img);
+  last_changed_label_img = writeDstData(last_label_img);
 
   imwrite("template_img_out/template_clean_label_img.tiff", clean_label_img);
   imwrite("template_img_out/template_changed_label_img.tiff", changed_label_img);
@@ -130,9 +127,18 @@ int main(int argc, char** argv){
 
   cout << "end label_img cleaning" << endl;
 */
+
+  vector<centroids_t> centroids;
+
+  string centroids_path = "template_img_out/template_centroids.tiff";
+  centroids = calcCentroids(centroids_path, template_img);
+
+
+
+
   cout << "feature detection" << endl;
-  //sum_min_label_word = tf.featureDetection(patch_size,last_label_img, &sum_one_dimention_scanning, &sum_xy, &sum_boundary, &sum_ave_keypoint, &sum_mean_vector);
-  sum_min_label_word = tf.featureDetection(patch_size,template_img, &sum_one_dimention_scanning, &sum_xy, &sum_boundary, &sum_ave_keypoint, &sum_mean_vector);
+  //sum_min_label_word = featureDetection(patch_size,last_label_img, &sum_one_dimention_scanning, &sum_xy, &sum_boundary, &sum_ave_keypoint, &sum_mean_vector);
+  sum_min_label_word = featureDetection(patch_size,template_img, &sum_one_dimention_scanning, &sum_xy, &sum_boundary, &sum_ave_keypoint, &sum_mean_vector);
 
 
 
@@ -164,11 +170,11 @@ int main(int argc, char** argv){
 
   cout << "write feature points..." << endl;
   string writeFeatureImage_fp = "template_img_out/template_detect_feature_point.tiff";
-  tf.writeFeaturePoint(template_img, &sum_xy, &sum_boundary, writeFeatureImage_fp);
+  writeFeaturePoint(template_img, &sum_xy, &sum_boundary, writeFeatureImage_fp);
 
   cout << "description..." << endl;
-  //keypoint_binary = tf.featureDescription(&sum_one_dimention_scanning, last_label_img);
-  keypoint_binary = tf.featureDescription(&sum_one_dimention_scanning, template_img);
+  //keypoint_binary = featureDescription(&sum_one_dimention_scanning, last_label_img);
+  keypoint_binary = featureDescription(&sum_one_dimention_scanning, template_img);
 
 
 
@@ -178,25 +184,25 @@ int main(int argc, char** argv){
   cout << "CSV output..." << endl;
 
   string key_bin_path = "template_img_out/template_keypoint_binary.csv";
-  tf.twod_intCsvWriter(keypoint_binary, key_bin_path);
+  twod_intCsvWriter(keypoint_binary, key_bin_path);
 
   string template_sum_label_d_path = "template_img_out/template_sum_one_dimention_scanning.csv";
-  tf.twod_intCsvWriter(sum_one_dimention_scanning, template_sum_label_d_path);
+  twod_intCsvWriter(sum_one_dimention_scanning, template_sum_label_d_path);
 
   string template_sum_xy_path = "template_img_out/template_yx.csv";
-  tf.twod_floatCsvWriter(sum_xy, template_sum_xy_path);
+  twod_floatCsvWriter(sum_xy, template_sum_xy_path);
 
   string sum_boundary_path = "template_img_out/template_sum_boundary.csv";
-  tf.twod_intCsvWriter(sum_boundary, sum_boundary_path);
+  twod_intCsvWriter(sum_boundary, sum_boundary_path);
 
   string sum_ave_path = "template_img_out/template_sum_ave_keypoint.csv";
-  tf.twod_doubleCsvWriter(sum_ave_keypoint, sum_ave_path);
+  twod_doubleCsvWriter(sum_ave_keypoint, sum_ave_path);
 
   string sum_min_path = "template_img_out/template_sum_min_label_word.csv";
-  tf.twod_intCsvWriter(sum_min_label_word, sum_min_path);
+  twod_intCsvWriter(sum_min_label_word, sum_min_path);
 
   string sum_mean_vector_path = "template_img_out/template_sum_mean_vector.csv";
-  tf.twod_intCsvWriter(sum_mean_vector, sum_mean_vector_path);
+  twod_intCsvWriter(sum_mean_vector, sum_mean_vector_path);
 
   return 0;
 }

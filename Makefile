@@ -1,7 +1,7 @@
 CC := g++
 
 
-all: template input
+all: clean template input
 
 
 template: template_topology_feature.cpp

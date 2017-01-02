@@ -730,7 +730,91 @@ vector<vector<int> > TopologyFeature::featureDetection(int patch_size, Mat chang
   *sum_mean_vector = this_sum_mean_vector;
   return sum_min_label_word;
 }
+/*
+---------------------------------------------------------------------------------------------------
+各領域の重心とその領域のラベルを取得
+---------------------------------------------------------------------------------------------------
+*/
+vector<TopologyFeature::centroids_t> TopologyFeature::calcCentroids(string centroids_path, Mat img){
 
+  int y_size = img.rows;
+  int x_size = img.cols;
+
+  vector<value_xy_t> value_xy;
+  value_xy_t tmp_value_xy;
+
+  for(int y = 0; y < y_size; y++){
+    for(int x = 0; x < x_size; x++){
+        tmp_value_xy.value = img.at<unsigned char>(y,x);
+        tmp_value_xy.focus_pt.x = x;
+        tmp_value_xy.focus_pt.y = y;
+        value_xy.push_back(tmp_value_xy);
+    }
+  }
+  vector<int> word_list;
+  vector<int> cnt_list;
+
+  word_list.push_back(value_xy[0].value);
+  cnt_list.push_back(1);
+
+  for(int o = 1; o < value_xy.size(); o++){
+    int match = 0;
+    for (int w = 0; w < word_list.size(); w++){
+      if (word_list[w] == value_xy[o].value){
+        cnt_list[w] += 1;
+        match = 1;
+      }
+    }
+    if(match == 0){
+      word_list.push_back(value_xy[o].value);
+      cnt_list.push_back(1);
+    }
+  }
+  /*
+  for(int i = 0; i < word_list.size(); i++){
+    cout << "word = " << word_list[i] << " cnt = " << cnt_list[i]<<endl;
+  }
+  */
+
+  int y_numerator;
+  int x_numerator;
+  int value;
+  double denominator;
+  vector<centroids_t> centroids;
+  centroids_t tmp_centroids;
+
+  for(int w = 0; w < word_list.size(); w++){
+    for(int c = 0; c < value_xy.size(); c++){
+      if(word_list[w] == value_xy[c].value){
+        denominator = cnt_list[w] * word_list[w];
+        x_numerator += value_xy[c].focus_pt.x * word_list[w];
+        y_numerator += value_xy[c].focus_pt.y * word_list[w];
+      }
+    }
+    tmp_centroids.value = word_list[w];
+    if(denominator > 0){
+      tmp_centroids.centroids.x = x_numerator / denominator;
+      tmp_centroids.centroids.y = y_numerator / denominator;
+    }else{
+      tmp_centroids.centroids.x = 0;
+      tmp_centroids.centroids.y = 0;
+    }
+    centroids.push_back(tmp_centroids);
+    x_numerator = 0;
+    y_numerator = 0;
+  }
+
+
+  Mat writeimg = img.clone();
+  cout << "centroids" <<endl;
+  for(int i = 0; i < centroids.size(); i++){
+    circle(writeimg, Point(centroids[i].centroids.x, centroids[i].centroids.y), 2 ,Scalar(10), 1,4 );
+    cout << "value = " << centroids[i].value <<" x = " << centroids[i].centroids.x << " y = " << centroids[i].centroids.y << endl;
+  }
+
+  imwrite(centroids_path, writeimg);
+  return centroids;
+}
 /*
 ---------------------------------------------------------------------------------------------------
 検出した特徴点の小さい方のラベルがキーポイントの中心に対して作る平均ベクトルを求める．
