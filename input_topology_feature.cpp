@@ -136,7 +136,6 @@ int main(int argc, char** argv){
  */
   cout << "calc centroids" << endl;
   vector<centroids_t> centroids;
-
   string centroids_path = "input_img_out/input_centroids.tiff";
   centroids = calcCentroids(centroids_path, input_img);
 
@@ -166,6 +165,7 @@ int main(int argc, char** argv){
   string writtenFeatureImage_fp = "input_img_out/input_detect_feature_point.tiff";
   writeFeaturePoint(input_img, &sum_xy, &sum_boundary, writtenFeatureImage_fp);
 
+  calib_input_featurepoint(centroids, &sum_xy, input_img);
 
   cout << "feature description" << endl;
   //keypoint_binary = featureDescription(&sum_one_dimention_scanning,last_label_img);

@@ -129,16 +129,13 @@ int main(int argc, char** argv){
 */
 
   vector<centroids_t> centroids;
-
   string centroids_path = "template_img_out/template_centroids.tiff";
   centroids = calcCentroids(centroids_path, template_img);
 
-
-
-
   cout << "feature detection" << endl;
   //sum_min_label_word = featureDetection(patch_size,last_label_img, &sum_one_dimention_scanning, &sum_xy, &sum_boundary, &sum_ave_keypoint, &sum_mean_vector);
-  sum_min_label_word = featureDetection(patch_size,template_img, &sum_one_dimention_scanning, &sum_xy, &sum_boundary, &sum_ave_keypoint, &sum_mean_vector);
+  //sum_min_label_word = featureDetection(patch_size,template_img, &sum_one_dimention_scanning, &sum_xy, &sum_boundary, &sum_ave_keypoint, &sum_mean_vector);
+
 
 
 

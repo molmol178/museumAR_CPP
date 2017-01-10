@@ -4,11 +4,11 @@
 
 int main(int argc, char *argv[]){
   cv::Mat src_img = cv::imread(argv[1], CV_LOAD_IMAGE_COLOR);
-  cv::Mat src_img1 = cv::imread(argv[2], CV_LOAD_IMAGE_COLOR);
-  cv::Mat src_img2 = cv::imread(argv[3], CV_LOAD_IMAGE_COLOR);
-  cv::Mat src_img3 = cv::imread(argv[4], CV_LOAD_IMAGE_COLOR);
-  cv::Mat src_img4 = cv::imread(argv[5], CV_LOAD_IMAGE_COLOR);
-  cv::Mat src_img5 = cv::imread(argv[6], CV_LOAD_IMAGE_COLOR);
+  //cv::Mat src_img1 = cv::imread(argv[2], CV_LOAD_IMAGE_COLOR);
+  //cv::Mat src_img2 = cv::imread(argv[3], CV_LOAD_IMAGE_COLOR);
+  //cv::Mat src_img3 = cv::imread(argv[4], CV_LOAD_IMAGE_COLOR);
+  //cv::Mat src_img4 = cv::imread(argv[5], CV_LOAD_IMAGE_COLOR);
+  //cv::Mat src_img5 = cv::imread(argv[6], CV_LOAD_IMAGE_COLOR);
  
   if(src_img.empty()) return -1;
   cv::Mat dst_img2;
@@ -48,7 +48,7 @@ int main(int argc, char *argv[]){
   imwrite("resized/resized_50.png", dst_img2);
   imwrite("resized/resized_25.png", dst_img3);
   imwrite("resized/resized_12-5.png", dst_img4);
-
+/*
   cv::resize(src_img1, dst_img12, cv::Size(), 0.5, 0.5,cv::INTER_AREA);
   cv::resize(src_img1, dst_img13, cv::Size(), 0.25, 0.25,cv::INTER_AREA);
   cv::resize(src_img1, dst_img14, cv::Size(), 0.125, 0.125,cv::INTER_AREA);
@@ -88,5 +88,5 @@ int main(int argc, char *argv[]){
   imwrite("resized/resized5_50.png", dst_img52);
   imwrite("resized/resized5_25.png", dst_img53);
   imwrite("resized/resized5_12-5.png", dst_img54);
-
+*/
 }
