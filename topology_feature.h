@@ -32,13 +32,26 @@ namespace TopologyFeature{
       vector<int> one_dimention_scanning;//特徴点の周囲16点
     };
 
+    struct valueAndVector{
+      int beginValue;//始点の画素値
+      int endValue;//終点の画素値
+      Point begin2endVector;
+      double vectorSize;//始点と終点のベクトル
+    };
+
+    struct simiCos{
+      int beginValue;//始点の画素値
+      int endValue;//終点の画素値
+      double simi_cos;//コサインのシミラリティ
+    };
+
     Mat template_splitRegion(int tmp_range, Mat template_hsv, vector<int> v_count_list, int flag);
     Mat re_label(Mat label_template_img);
     Mat cleanLabelImage(Mat dst_data, int patch_size);
     Mat remapLabel(Mat label_img);
     Mat writeDstData(Mat clean_label_img);
     vector<Centroids> calcCentroids(string centroids_path, Mat img);
-    void calib_input_featurepoint(vector<Centroids> centroids, vector<Featurepoints> featurepoint, Mat input_img);
+    void calib_input_featurepoint(vector<Centroids> input_centroids, vector<Centroids> template_centroids, vector<Featurepoints> input_featurepoint, vector<Featurepoints> template_featurepoint, Mat input_img, Mat template_img);
 
 
     vector<Featurepoints> featureDetection(int patch_size, Mat changed_label_img);

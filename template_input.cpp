@@ -13,14 +13,22 @@ using namespace cv;
 using namespace TopologyFeature;
 
 int main(int argc, char** argv){
-  clock_t start = clock(); //処理時間計測開始
+
+  // 時間計算のための周波数
+  double f = 1000.0 / cv::getTickFrequency();
+  int64 time_all = cv::getTickCount(); // 時間計測 Start
+
+  int64 time_s; //スタート時間
+  double time_detect; // 検出エンド時間
+  double time_match; // マッチングエンド時間
+  double time_alls;
 
   Mat input_img;
   Mat template_img;
 
   int patch_size;
   int tmp_range;
- 
+
   input_img = imread(argv[1], IMREAD_GRAYSCALE);
   template_img = imread(argv[2], IMREAD_GRAYSCALE);
   patch_size = 7;
@@ -39,17 +47,21 @@ int main(int argc, char** argv){
   cout << "feature detection" << endl;
   vector<Featurepoints> template_featurepoint;
   vector<Featurepoints> input_featurepoint;
+  time_s = cv::getTickCount(); // 時間計測 Start
   template_featurepoint = featureDetection(patch_size, template_img);
+  time_detect = (cv::getTickCount() - time_s)*f; // 時間計測 Stop
+
   input_featurepoint = featureDetection(patch_size, input_img);
 
+
+  cout << "write featurepoint" << endl;
   string writeFeatureImage_fp = "template_img_out/template_detect_feature_point.tiff";
   writeFeaturePoint(template_img, template_featurepoint, writeFeatureImage_fp);
-
   string writtenFeatureImage_fp = "input_img_out/input_detect_feature_point.tiff";
   writeFeaturePoint(input_img, input_featurepoint, writtenFeatureImage_fp);
 
-  calib_input_featurepoint(input_centroids, input_featurepoint, input_img);
-  calib_input_featurepoint(input_centroids, template_featurepoint, input_img);
+  cout << "calib input img" << endl;
+  calib_input_featurepoint(input_centroids, template_centroids, input_featurepoint, template_featurepoint, input_img ,template_img);
 
   cout << "feature description" << endl;
   vector<vector<int> > template_keypoint_binary;
@@ -64,11 +76,18 @@ int main(int argc, char** argv){
   //twod_intCsvWriter(input_keypoint_binary, key_bin_path);
 
   cout << "feature matching " << endl;
+  time_s = cv::getTickCount(); // 時間計測 Start
   featureMatching(template_img, input_img, template_keypoint_binary, input_keypoint_binary, template_featurepoint, input_featurepoint);
+  time_match = (cv::getTickCount() - time_s)*f; // 時間計測 Stop
 
-  clock_t end = clock(); //処理時間計測終了
-  cout << "duration = " << (double)(end - start) / CLOCKS_PER_SEC << "sec.\n";
 
+
+  time_alls = (cv::getTickCount() - time_all)*f; // 時間計測 Stop
+
+
+  cout << "detect time =" << time_detect << " ms" <<endl;
+  cout << "matching time = " << time_match << " ms" << endl;
+  cout << "all processing time = " << time_alls << " ms" << endl;
 
   return 0;
 }

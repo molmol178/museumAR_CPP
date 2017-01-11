@@ -767,16 +767,6 @@ vector<TopologyFeature::Featurepoints> TopologyFeature::featureDetection(int pat
 
 /*
 ---------------------------------------------------------------------------------------------------
-templateとinputの重心座標を使ってinputの特徴点座標のキャリブレーション(回転不変に)
----------------------------------------------------------------------------------------------------
-*/
-void TopologyFeature::calib_input_featurepoint(vector<Centroids> centroids, vector<Featurepoints> featurepoint, Mat input_img){
-
-  cout << "calib_input_featurepoint test" << endl;
-
-}
-/*
----------------------------------------------------------------------------------------------------
 検出した特徴点を保存する
 ---------------------------------------------------------------------------------------------------
 */
@@ -1007,6 +997,94 @@ void TopologyFeature::writeFeaturePoint(Mat template_img, vector<Featurepoints> 
     }
   }
   imwrite(filepath, template_img);
+}
+/*
+---------------------------------------------------------------------------------------------------
+templateとinputの重心座標を使ってinputの特徴点座標のキャリブレーション(回転不変に)
+---------------------------------------------------------------------------------------------------
+*/
+void TopologyFeature::calib_input_featurepoint(vector<Centroids> input_centroids, vector<Centroids> template_centroids, vector<Featurepoints> input_featurepoint, vector<Featurepoints> template_featurepoint, Mat input_img, Mat template_img){
+
+  double input_maxVal;
+  double input_minVal;
+  minMaxLoc(input_img, &input_minVal, &input_maxVal);
+  double template_maxVal;
+  double template_minVal;
+  minMaxLoc(template_img, &template_minVal, &template_maxVal);
+
+  int input_min_index;
+  for(int i = 0; i < input_centroids.size(); i++) {
+    if(input_centroids[i].value == input_minVal){
+      input_min_index = i;
+    }
+  }
+  int template_min_index;
+  for(int i = 0; i < template_centroids.size(); i++) {
+    if(template_centroids[i].value == template_minVal){
+      template_min_index = i;
+    }
+  }
+
+  vector<valueAndVector> input_valueAndVector;
+  valueAndVector tmp_input_valueAndVector;
+
+  vector<valueAndVector> template_valueAndVector;
+  valueAndVector tmp_template_valueAndVector;
+
+  for(int i = 0; i < input_centroids.size(); i++){
+    if(input_centroids[i].value != input_centroids[input_min_index].value){
+      tmp_input_valueAndVector.begin2endVector.x = input_centroids[i].centroids.x - input_centroids[input_min_index].centroids.x;
+      tmp_input_valueAndVector.begin2endVector.y = input_centroids[i].centroids.y - input_centroids[input_min_index].centroids.y;
+      tmp_input_valueAndVector.vectorSize = sqrt(pow(tmp_input_valueAndVector.begin2endVector.x ,2.0) + pow(tmp_input_valueAndVector.begin2endVector.y, 2.0));
+
+      tmp_input_valueAndVector.beginValue = input_centroids[input_min_index].value;
+      tmp_input_valueAndVector.endValue = input_centroids[i].value;
+      input_valueAndVector.push_back(tmp_input_valueAndVector);
+    }
+  }
+
+  for(int i = 0; i < template_centroids.size(); i++){
+    if(template_centroids[i].value != template_centroids[template_min_index].value){
+      tmp_template_valueAndVector.begin2endVector.x = template_centroids[i].centroids.x - template_centroids[template_min_index].centroids.x;
+      tmp_template_valueAndVector.begin2endVector.y = template_centroids[i].centroids.y - template_centroids[template_min_index].centroids.y;
+      tmp_template_valueAndVector.vectorSize = sqrt(pow(tmp_template_valueAndVector.begin2endVector.x,2.0) + pow(tmp_template_valueAndVector.begin2endVector.y, 2.0));
+
+      tmp_template_valueAndVector.beginValue = template_centroids[template_min_index].value;
+      tmp_template_valueAndVector.endValue = template_centroids[i].value;
+      template_valueAndVector.push_back(tmp_template_valueAndVector);
+    }
+  }
+
+  vector<simiCos> calced_vector;
+  simiCos tmp_calced_vector;
+  double vector_size;
+  double numerator;
+
+  for(int i = 0; i < template_valueAndVector.size(); i++){
+    for(int j = 0; j < input_valueAndVector.size(); j++){
+      if(template_valueAndVector[i].beginValue == input_valueAndVector[j].beginValue &&
+         template_valueAndVector[i].endValue == input_valueAndVector[j].endValue){
+        vector_size = template_valueAndVector[i].vectorSize * input_valueAndVector[j].vectorSize;
+        numerator = template_valueAndVector[i].begin2endVector.x * input_valueAndVector[j].begin2endVector.x + template_valueAndVector[i].begin2endVector.y * input_valueAndVector[j].begin2endVector.y;
+        if(vector_size >= 0){
+          tmp_calced_vector.simi_cos = numerator / vector_size;
+        }else{
+          tmp_calced_vector.simi_cos = 0;
+        }
+        tmp_calced_vector.beginValue = template_valueAndVector[i].beginValue;
+        tmp_calced_vector.endValue = template_valueAndVector[i].endValue;
+        calced_vector.push_back(tmp_calced_vector);
+      }
+    }
+  }
+
+  for(int i = 0; i < calced_vector.size(); i++){
+    cout << "========================================" << endl;
+    cout << "begin value = " << calced_vector[i].beginValue << endl;
+    cout << "end value = " << calced_vector[i].endValue << endl;
+    cout << "simi = " << calced_vector[i].simi_cos << endl;
+  }
+
 }
 
 /*
