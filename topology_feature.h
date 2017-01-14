@@ -20,6 +20,7 @@ namespace TopologyFeature{
     struct Centroids{
       int value;//画素値
       Point centroids; //重心座標
+      Point calib_centroids;//補正した重心(calib_featurepoint()用)
     };
 
     struct Featurepoints{
@@ -30,18 +31,37 @@ namespace TopologyFeature{
       Point mean_vector;//平均ベクトル
       int min_label_word;//領域が小さい方のラベル値
       vector<int> one_dimention_scanning;//特徴点の周囲16点
+      Point calib_coordinate; //補正した座標(calib_featurepoint用)
     };
 
     struct valueAndVector{
       int beginValue;//始点の画素値
       int endValue;//終点の画素値
-      Point begin2endVector;
-      double vectorSize;//始点と終点のベクトル
+      Point beginXY;//始点の座標
+      Point begin2endVector;//始点と終点のベクトル
+      double vectorSize;//始点と終点のベクトルの大きさ
+    };
+
+    struct cent2feature{
+      int value;
+      Point vectorC2F;
+      Point pure_featurepoint;
+      double vectorSize;
+    };
+
+    struct matchPoint{
+      Point template_match;
+      Point input_match;
+    };
+    struct keypoint{
+      Point xy;
+      vector<int> binary;
     };
 
     struct simiCos{
       int beginValue;//始点の画素値
       int endValue;//終点の画素値
+      Point coordinate; //座標
       double simi_cos;//コサインのシミラリティ
     };
 
@@ -51,7 +71,7 @@ namespace TopologyFeature{
     Mat remapLabel(Mat label_img);
     Mat writeDstData(Mat clean_label_img);
     vector<Centroids> calcCentroids(string centroids_path, Mat img);
-    void calib_input_featurepoint(vector<Centroids> input_centroids, vector<Centroids> template_centroids, vector<Featurepoints> input_featurepoint, vector<Featurepoints> template_featurepoint, Mat input_img, Mat template_img);
+    void calib_featurepoint(vector<Centroids> centroids, vector<Featurepoints> featurepoint,Mat img, vector<Centroids> *p_relative_centroids, vector<Featurepoints> *p_relative_featurepoint );
 
 
     vector<Featurepoints> featureDetection(int patch_size, Mat changed_label_img);
@@ -59,13 +79,17 @@ namespace TopologyFeature{
     void calcMeanVector(int x, int y, int min_label_word, vector<int> label_one_dimention_scanning, Featurepoints *tmp_featurepoint);
 
 
-    vector<Featurepoints> saveFeaturePoint(int x, int y, int min_label_word, vector<int> one_dimention_scanning, vector<int> word_list, int tmp_boundary, vector<Featurepoints> featurepoint, int scanning_center);
+    vector<Featurepoints> saveFeaturePoint(int x, int y, int min_word, int min_label_word, vector<int> one_dimention_scanning, vector<int> word_list, int tmp_boundary, vector<Featurepoints> featurepoint, int scanning_center);
 
 
     void writeFeaturePoint(Mat template_img, vector<Featurepoints> featurepoint, string filepath);
-    vector<vector<int> > featureDescription(vector<Featurepoints> featurepoint, Mat label_img );
+    vector<keypoint> featureDescription(vector<Featurepoints> featurepoint, Mat label_img );
     Mat inputCreateLabelImg(Mat input_hsv);
-    void featureMatching(Mat template_img, Mat input_img, vector<vector<int> > template_keypoint_binary, vector<vector<int> > input_keypoint_binary,vector<Featurepoints> template_featurepoint, vector<Featurepoints> input_featurepoint);
+    //void featureMatching(Mat template_img, Mat input_img, vector<vector<int> > template_keypoint_binary, vector<vector<int> > input_keypoint_binary,vector<Featurepoints> template_featurepoint, vector<Featurepoints> input_featurepoint);
+    vector<cent2feature> calc_relative_centroids2featurepointVector(vector<Centroids> template_relative_centroids, vector<Featurepoints> template_relative_featurepoint);
+
+    void featureMatching(Mat template_img, Mat input_img, vector<keypoint> template_keypoint_binary, vector<keypoint> input_keypoint_binary,vector<cent2feature> template_vector, vector<cent2feature> input_vector);
+
     void calc_Homography(vector<Point2f> template_pt, vector<Point2f> input_pt, vector<DMatch> goodMatch);
     vector<int> oned_intCsvReader(string filePath);
     vector<vector<int> > twod_intCsvReader(string filePath);

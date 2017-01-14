@@ -664,6 +664,7 @@ vector<TopologyFeature::Featurepoints> TopologyFeature::featureDetection(int pat
 
   int scan_x = scanning_filter.cols;
   int scan_y = scanning_filter.rows;
+  int featurepoint_cnt = 0;
 
 
   for(int y = 0; y < y_size - scan_y; y++){
@@ -719,6 +720,8 @@ vector<TopologyFeature::Featurepoints> TopologyFeature::featureDetection(int pat
             //cnt_listの最小値のインデックス
             size_t cnt_minIndex = distance(cnt_list.begin(), min_cntIt);
 
+            //cnt_listの最小値をとる
+            int min_word = *min_element(word_list.begin(), word_list.end());
 
 
             //要素数が2,短い方のラベルが中心画素と同じ
@@ -726,42 +729,46 @@ vector<TopologyFeature::Featurepoints> TopologyFeature::featureDetection(int pat
               if(word_list.size() == 2 && scanning_center == word_list[cnt_minIndex]){
                 //最も小さいラベルが120度以下
                 if(min_cnt <= one_n / 3){
+                  featurepoint_cnt ++;
                   //word_listの合計を求める
                   int tmp_boundary = 2;
                   int min_label_word = word_list[cnt_minIndex];
-                  featurepoint = saveFeaturePoint(x, y, min_label_word, one_dimention_scanning, word_list, tmp_boundary, featurepoint, scanning_center);
+                  featurepoint = saveFeaturePoint(x, y, min_word, min_label_word, one_dimention_scanning, word_list, tmp_boundary, featurepoint, scanning_center);
                 }
               }
             }
             else if(one_d_count == 2){
               if(word_list.size() == 3){
+                  featurepoint_cnt ++;
                 int tmp_boundary = 3;
                 int min_label_word = word_list[cnt_minIndex];
-                featurepoint = saveFeaturePoint(x, y, min_label_word, one_dimention_scanning, word_list, tmp_boundary, featurepoint, scanning_center);
+                featurepoint = saveFeaturePoint(x, y, min_word, min_label_word, one_dimention_scanning, word_list, tmp_boundary, featurepoint, scanning_center);
                 }
               //patch_sizeによって変わる
               if (one_dimention_scanning[0] == one_dimention_scanning[15] && scanning_center == word_list[cnt_minIndex]){
                 //最も小さいラベルが120度以下
                 if(min_cnt <= one_n / 3){
+                  featurepoint_cnt ++;
                 int tmp_boundary = 2;
                 int min_label_word = word_list[cnt_minIndex];
-                featurepoint = saveFeaturePoint(x, y, min_label_word, one_dimention_scanning, word_list, tmp_boundary, featurepoint, scanning_center);
+                featurepoint = saveFeaturePoint(x, y, min_word, min_label_word, one_dimention_scanning, word_list, tmp_boundary, featurepoint, scanning_center);
                 }
               }
           }
           else if(one_d_count == 3){
               //patch_sizeによって変わる
               if (one_dimention_scanning[0] == one_dimention_scanning[15]){
+                  featurepoint_cnt ++;
                 //最も小さいラベルが120度以下
                 int tmp_boundary = 3;
                 int min_label_word = word_list[cnt_minIndex];
-                featurepoint = saveFeaturePoint(x, y, min_label_word, one_dimention_scanning, word_list, tmp_boundary, featurepoint, scanning_center);
+                featurepoint = saveFeaturePoint(x, y, min_word, min_label_word, one_dimention_scanning, word_list, tmp_boundary, featurepoint, scanning_center);
               }
            }
         }
     }
   }
-
+  cout << "featurepoint count = " << featurepoint_cnt << endl;
   return featurepoint;
 }
 
@@ -770,13 +777,15 @@ vector<TopologyFeature::Featurepoints> TopologyFeature::featureDetection(int pat
 検出した特徴点を保存する
 ---------------------------------------------------------------------------------------------------
 */
-vector<TopologyFeature::Featurepoints> TopologyFeature::saveFeaturePoint(int x, int y, int min_label_word, vector<int> one_dimention_scanning, vector<int> word_list, int tmp_boundary, vector<TopologyFeature::Featurepoints> featurepoint, int scanning_center){
+vector<TopologyFeature::Featurepoints> TopologyFeature::saveFeaturePoint(int x, int y, int min_word, int min_label_word, vector<int> one_dimention_scanning, vector<int> word_list, int tmp_boundary, vector<Featurepoints> featurepoint, int scanning_center){
 
 
   Featurepoints tmp_featurepoint;
 
   tmp_featurepoint.one_dimention_scanning = one_dimention_scanning;
-  tmp_featurepoint.value = scanning_center;
+  //tmp_featurepoint.value = scanning_center;
+  tmp_featurepoint.value = min_word;
+
 
   float words_sum = 0;
   for (int words = 0; words < word_list.size(); words++){
@@ -790,8 +799,6 @@ vector<TopologyFeature::Featurepoints> TopologyFeature::saveFeaturePoint(int x, 
   //patch_sizeによって変わる
   tmp_featurepoint.coordinate.y = y+3;
   tmp_featurepoint.coordinate.x = x+3;
-
-  //this_sum_xy.push_back(tmp_sum_xy);
 
   tmp_featurepoint.boundary = tmp_boundary;
 
@@ -1003,120 +1010,156 @@ void TopologyFeature::writeFeaturePoint(Mat template_img, vector<Featurepoints> 
 templateとinputの重心座標を使ってinputの特徴点座標のキャリブレーション(回転不変に)
 ---------------------------------------------------------------------------------------------------
 */
-void TopologyFeature::calib_input_featurepoint(vector<Centroids> input_centroids, vector<Centroids> template_centroids, vector<Featurepoints> input_featurepoint, vector<Featurepoints> template_featurepoint, Mat input_img, Mat template_img){
+void TopologyFeature::calib_featurepoint(vector<Centroids> centroids, vector<Featurepoints> featurepoint, Mat img, vector<Centroids> *p_relative_centroids, vector<Featurepoints> *p_relative_featurepoint){
 
-  double input_maxVal;
-  double input_minVal;
-  minMaxLoc(input_img, &input_minVal, &input_maxVal);
-  double template_maxVal;
-  double template_minVal;
-  minMaxLoc(template_img, &template_minVal, &template_maxVal);
+  double maxVal;
+  double minVal;
+  minMaxLoc(img, &minVal, &maxVal);
 
-  int input_min_index;
-  for(int i = 0; i < input_centroids.size(); i++) {
-    if(input_centroids[i].value == input_minVal){
-      input_min_index = i;
-    }
-  }
-  int template_min_index;
-  for(int i = 0; i < template_centroids.size(); i++) {
-    if(template_centroids[i].value == template_minVal){
-      template_min_index = i;
+  int min_index;
+  for(int i = 0; i < centroids.size(); i++) {
+    if(centroids[i].value == minVal){
+      min_index = i;
     }
   }
 
-  vector<valueAndVector> input_valueAndVector;
-  valueAndVector tmp_input_valueAndVector;
+  vector<valueAndVector> valAndVector;
+  valueAndVector tmp_valAndVector;
 
-  vector<valueAndVector> template_valueAndVector;
-  valueAndVector tmp_template_valueAndVector;
 
-  for(int i = 0; i < input_centroids.size(); i++){
-    if(input_centroids[i].value != input_centroids[input_min_index].value){
-      tmp_input_valueAndVector.begin2endVector.x = input_centroids[i].centroids.x - input_centroids[input_min_index].centroids.x;
-      tmp_input_valueAndVector.begin2endVector.y = input_centroids[i].centroids.y - input_centroids[input_min_index].centroids.y;
-      tmp_input_valueAndVector.vectorSize = sqrt(pow(tmp_input_valueAndVector.begin2endVector.x ,2.0) + pow(tmp_input_valueAndVector.begin2endVector.y, 2.0));
+  for(int i = 0; i < centroids.size(); i++){
+    if(centroids[i].value != centroids[min_index].value){
+      tmp_valAndVector.begin2endVector.x = centroids[i].centroids.x - centroids[min_index].centroids.x;
+      tmp_valAndVector.begin2endVector.y = centroids[i].centroids.y - centroids[min_index].centroids.y;
+      tmp_valAndVector.vectorSize = sqrt(pow(tmp_valAndVector.begin2endVector.x ,2.0) + pow(tmp_valAndVector.begin2endVector.y, 2.0));
 
-      tmp_input_valueAndVector.beginValue = input_centroids[input_min_index].value;
-      tmp_input_valueAndVector.endValue = input_centroids[i].value;
-      input_valueAndVector.push_back(tmp_input_valueAndVector);
+      tmp_valAndVector.beginXY.x = centroids[min_index].centroids.x;
+      tmp_valAndVector.beginXY.y = centroids[min_index].centroids.y;
+
+      tmp_valAndVector.beginValue = centroids[min_index].value;
+      tmp_valAndVector.endValue = centroids[i].value;
+      valAndVector.push_back(tmp_valAndVector);
+    }else{
+      tmp_valAndVector.begin2endVector.x = 0;
+      tmp_valAndVector.begin2endVector.y = 0;
+      tmp_valAndVector.vectorSize = sqrt(pow(tmp_valAndVector.begin2endVector.x ,2.0) + pow(tmp_valAndVector.begin2endVector.y, 2.0));
+
+      tmp_valAndVector.beginXY.x = centroids[min_index].centroids.x;
+      tmp_valAndVector.beginXY.y = centroids[min_index].centroids.y;
+
+      tmp_valAndVector.beginValue = centroids[min_index].value;
+      tmp_valAndVector.endValue = centroids[min_index].value;
+      valAndVector.push_back(tmp_valAndVector);
     }
   }
+  vector<Centroids> relativeCent = *p_relative_centroids;
+  vector<Featurepoints> relativeFP = *p_relative_featurepoint;
 
-  for(int i = 0; i < template_centroids.size(); i++){
-    if(template_centroids[i].value != template_centroids[template_min_index].value){
-      tmp_template_valueAndVector.begin2endVector.x = template_centroids[i].centroids.x - template_centroids[template_min_index].centroids.x;
-      tmp_template_valueAndVector.begin2endVector.y = template_centroids[i].centroids.y - template_centroids[template_min_index].centroids.y;
-      tmp_template_valueAndVector.vectorSize = sqrt(pow(tmp_template_valueAndVector.begin2endVector.x,2.0) + pow(tmp_template_valueAndVector.begin2endVector.y, 2.0));
+  Featurepoints tmp_relativeFP;
+  Centroids tmp_relativeCent;
 
-      tmp_template_valueAndVector.beginValue = template_centroids[template_min_index].value;
-      tmp_template_valueAndVector.endValue = template_centroids[i].value;
-      template_valueAndVector.push_back(tmp_template_valueAndVector);
+
+  //求めたベクトルの始点と終点のラベルが持つ重心と特徴点を始点からの相対位置(ベクトル)に変換
+  for(int i = 0; i < valAndVector.size(); i++){
+    for(int k = 0; k < centroids.size(); k++){
+      if(valAndVector[i].beginValue == centroids[k].value){
+        tmp_relativeCent.value = valAndVector[i].beginValue;
+        tmp_relativeCent.calib_centroids.x = 0;
+        tmp_relativeCent.calib_centroids.y = 0;
+        tmp_relativeCent.centroids.x = centroids[k].centroids.x;
+        tmp_relativeCent.centroids.y = centroids[k].centroids.y;
+        relativeCent.push_back(tmp_relativeCent);
+      }
+      else{
+        tmp_relativeCent.value = valAndVector[i].endValue;
+        tmp_relativeCent.calib_centroids.x = centroids[k].centroids.x - valAndVector[i].beginXY.x;
+        tmp_relativeCent.calib_centroids.y = centroids[k].centroids.y - valAndVector[i].beginXY.y;
+        tmp_relativeCent.centroids.x = centroids[k].centroids.x;
+        tmp_relativeCent.centroids.y = centroids[k].centroids.y;
+        relativeCent.push_back(tmp_relativeCent);
+      }
     }
-  }
+    for(int j = 0; j < featurepoint.size(); j++){
+      if(valAndVector[i].beginValue == featurepoint[j].value){
+        tmp_relativeFP.value = featurepoint[j].value;
+        tmp_relativeFP.calib_coordinate.x = featurepoint[j].coordinate.x - valAndVector[j].beginXY.x;
+        tmp_relativeFP.calib_coordinate.y = featurepoint[j].coordinate.y - valAndVector[j].beginXY.y;
+        tmp_relativeFP.coordinate.x = featurepoint[j].coordinate.x;
+        tmp_relativeFP.coordinate.y = featurepoint[j].coordinate.y;
 
-  vector<simiCos> calced_vector;
-  simiCos tmp_calced_vector;
-  double vector_size;
-  double numerator;
+        tmp_relativeFP.boundary = featurepoint[j].boundary;
+        tmp_relativeFP.ave_keypoint = featurepoint[j].ave_keypoint;
+        tmp_relativeFP.mean_vector.x = featurepoint[j].mean_vector.x;
+        tmp_relativeFP.mean_vector.y = featurepoint[j].mean_vector.y;
+        tmp_relativeFP.min_label_word = featurepoint[j].min_label_word;
+        tmp_relativeFP.one_dimention_scanning = featurepoint[j].one_dimention_scanning;
 
-  for(int i = 0; i < template_valueAndVector.size(); i++){
-    for(int j = 0; j < input_valueAndVector.size(); j++){
-      if(template_valueAndVector[i].beginValue == input_valueAndVector[j].beginValue &&
-         template_valueAndVector[i].endValue == input_valueAndVector[j].endValue){
-        vector_size = template_valueAndVector[i].vectorSize * input_valueAndVector[j].vectorSize;
-        numerator = template_valueAndVector[i].begin2endVector.x * input_valueAndVector[j].begin2endVector.x + template_valueAndVector[i].begin2endVector.y * input_valueAndVector[j].begin2endVector.y;
-        if(vector_size >= 0){
-          tmp_calced_vector.simi_cos = numerator / vector_size;
-        }else{
-          tmp_calced_vector.simi_cos = 0;
-        }
-        tmp_calced_vector.beginValue = template_valueAndVector[i].beginValue;
-        tmp_calced_vector.endValue = template_valueAndVector[i].endValue;
-        calced_vector.push_back(tmp_calced_vector);
+        relativeFP.push_back(tmp_relativeFP);
+      }
+      else{
+        tmp_relativeFP.value = featurepoint[j].value;
+        tmp_relativeFP.calib_coordinate.x = featurepoint[j].coordinate.x - valAndVector[j].beginXY.x;
+        tmp_relativeFP.calib_coordinate.y = featurepoint[j].coordinate.y - valAndVector[j].beginXY.y;
+        tmp_relativeFP.coordinate.x = featurepoint[j].coordinate.x;
+        tmp_relativeFP.coordinate.y = featurepoint[j].coordinate.y;
+        tmp_relativeFP.boundary = featurepoint[j].boundary;
+        tmp_relativeFP.ave_keypoint = featurepoint[j].ave_keypoint;
+        tmp_relativeFP.mean_vector.x = featurepoint[j].mean_vector.x;
+        tmp_relativeFP.mean_vector.y = featurepoint[j].mean_vector.y;
+        tmp_relativeFP.min_label_word = featurepoint[j].min_label_word;
+        tmp_relativeFP.one_dimention_scanning = featurepoint[j].one_dimention_scanning;
+
+        relativeFP.push_back(tmp_relativeFP);
       }
     }
   }
 
-  for(int i = 0; i < calced_vector.size(); i++){
-    cout << "========================================" << endl;
-    cout << "begin value = " << calced_vector[i].beginValue << endl;
-    cout << "end value = " << calced_vector[i].endValue << endl;
-    cout << "simi = " << calced_vector[i].simi_cos << endl;
-  }
+  *p_relative_centroids = relativeCent;
+  *p_relative_featurepoint = relativeFP;
 
 }
-
 /*
 ---------------------------------------------------------------------------------------------------
 検出した特徴点の特徴量を記述する
 画像上のラベルの内特徴点にはどのラベルがあるかでバイナリを作成
 ---------------------------------------------------------------------------------------------------
 */
-vector<vector<int> > TopologyFeature::featureDescription(vector<Featurepoints> featurepoint, Mat label_img){
+vector<TopologyFeature::keypoint> TopologyFeature::featureDescription(vector<Featurepoints> featurepoint, Mat label_img){
 
   double maxVal;
   minMaxLoc(label_img, NULL, &maxVal);
   vector<int> one_d_dst(maxVal, 0);
 
-  for(int i = 0; i < one_d_dst.size(); i++){
-    one_d_dst[i] = i;
-  }
-  vector<vector<int> > keypoint_binary(featurepoint.size(), vector<int>(one_d_dst.size(), 0));
+  //for(int i = 0; i < one_d_dst.size(); i++){
+    //one_d_dst[i] = i;
+  //}
+  //vector<vector<int> > keypoint_binary(featurepoint.size(), vector<int>(one_d_dst.size(), 0));
+  vector<keypoint> keypoint_binary;
+  keypoint tmp_keypoint_binary;
 
   for(int y = 0; y < featurepoint.size(); y++){
+
+    for(int i = 0; i < one_d_dst.size(); i++){
+      tmp_keypoint_binary.binary.push_back(0);
+    }
+    tmp_keypoint_binary.xy.x = featurepoint[y].coordinate.x;
+    tmp_keypoint_binary.xy.y = featurepoint[y].coordinate.y;
     for(int x = 0; x < featurepoint[y].one_dimention_scanning.size(); x++){
       int sum_scanning_yx = featurepoint[y].one_dimention_scanning[x];
-      if(keypoint_binary[y][sum_scanning_yx] == 0){
-        keypoint_binary[y][sum_scanning_yx] = 1;
+      if(tmp_keypoint_binary.binary[sum_scanning_yx] == 0){
+        tmp_keypoint_binary.binary[sum_scanning_yx] = 1;
       }
     }
+    keypoint_binary.push_back(tmp_keypoint_binary);
+    tmp_keypoint_binary.binary.erase(tmp_keypoint_binary.binary.begin(), tmp_keypoint_binary.binary.end());
   }
+
 /*
-  cout << "keypoint_binary = " << endl;
-  for(int i = 0; i < keypoint_binary.size(); i++){
-    for(int j = 0; j < keypoint_binary[0].size(); j++){
-      cout << keypoint_binary[i][j] << ", ";
+  cout << "keypoint binary -----------"<<endl;
+  for (int i = 0; i < keypoint_binary.size(); i++){
+    cout << "x = " << keypoint_binary[i].xy.x << " y = " << keypoint_binary[i].xy.y << endl;
+    for(int j = 0; j < keypoint_binary[i].binary.size(); j++){
+      cout << keypoint_binary[i].binary[j] ;
     }
     cout << endl;
   }
@@ -1242,14 +1285,39 @@ Mat TopologyFeature::inputCreateLabelImg(Mat input_hsv){
 
   return label_input_img;
 }
+/*
+---------------------------------------------------------------------------------------------------
+相対位置の重心とそのラベル値の特徴点のtemplate画像とinput画像間でのシミラリティを計算するためのベクトルを計算
+---------------------------------------------------------------------------------------------------
+*/
+vector<TopologyFeature::cent2feature> TopologyFeature::calc_relative_centroids2featurepointVector(vector<Centroids> template_relative_centroids, vector<Featurepoints> template_relative_featurepoint){
 
+  vector<cent2feature> template_vector;
+  cent2feature tmp_template_vector;
+
+  for(int i = 0; i < template_relative_centroids.size(); i++){
+    for(int j = 0; j < template_relative_featurepoint.size(); j++){
+      if(template_relative_centroids[i].value == template_relative_featurepoint[j].value){
+        tmp_template_vector.value = template_relative_centroids[i].value;
+        tmp_template_vector.vectorC2F.x = template_relative_featurepoint[j].calib_coordinate.x - template_relative_centroids[i].calib_centroids.x;
+        tmp_template_vector.vectorC2F.y = template_relative_featurepoint[j].calib_coordinate.y - template_relative_centroids[i].calib_centroids.y;
+        tmp_template_vector.pure_featurepoint.x = template_relative_featurepoint[j].coordinate.x;
+        tmp_template_vector.pure_featurepoint.y = template_relative_featurepoint[j].coordinate.y;
+        tmp_template_vector.vectorSize = sqrt(pow(tmp_template_vector.vectorC2F.x, 2.0) + pow(tmp_template_vector.vectorC2F.y, 2.0));
+        template_vector.push_back(tmp_template_vector);
+      }
+    }
+  }
+
+  return template_vector;
+}
 /*
 ---------------------------------------------------------------------------------------------------
 特徴点をマッチング
 結果画像を出力
 ---------------------------------------------------------------------------------------------------
 */
-void TopologyFeature::featureMatching(Mat template_img, Mat input_img, vector<vector<int> > template_keypoint_binary, vector<vector<int> > input_keypoint_binary,vector<Featurepoints> template_featurepoint, vector<Featurepoints> input_featurepoint){
+void TopologyFeature::featureMatching(Mat template_img, Mat input_img, vector<keypoint> template_keypoint_binary, vector<keypoint> input_keypoint_binary,vector<cent2feature> template_vector, vector<cent2feature> input_vector){
   int input_y = input_img.rows;
   int input_x = input_img.cols;
 
@@ -1258,54 +1326,12 @@ void TopologyFeature::featureMatching(Mat template_img, Mat input_img, vector<ve
 
   Mat sum_img = Mat(input_y, input_x + template_x, CV_8UC3);
   hconcat(input_img, template_img, sum_img);
+
+  int numerator;
+  double sizes;
+  double simi_cos;
+
   int h = 0;
-  //double calc_ave = 0;
-  //int calc_boundary = 0;
-  //int calc_min_label = 0;
-  //double calc_simi_vector = 0.0;
-  vector<int> tmp_ij;
-  vector<vector<int> > sum_ij;
-  cout << "first matching" << endl;
-  for(int i = 0; i < template_keypoint_binary.size(); i++){
-    for(int j = 0; j< input_keypoint_binary.size(); j++){
-      for(int k = 0; k < template_keypoint_binary[0].size(); k++){
-        h += template_keypoint_binary[i][k] - input_keypoint_binary[j][k];
-        if(h != 0){
-          //h = 100;
-          break;
-        }
-      }
-      //calc_ave = template_ave[i][0] - sum_ave_keypoint[j][0];
-      //calc_boundary = template_boundary[i][0] - sum_boundary[j][0];
-      //calc_min_label = template_min_label[i][0] - sum_min_label_word[j][0];
-      //calc_simi_vector = (template_mean_vector[i][0] * sum_mean_vector[j][0] + template_mean_vector[i][1] * sum_mean_vector[j][1]) / (sqrt(pow(template_mean_vector[i][0],2.0) + pow(template_mean_vector[i][1], 2.0)) * sqrt(pow(sum_mean_vector[j][0], 2.0) + pow(sum_mean_vector[j][1], 2.0)));
-
-      if(h == 0){
-        tmp_ij.push_back(i);
-        tmp_ij.push_back(j);
-        sum_ij.push_back(tmp_ij);
-        tmp_ij.erase(tmp_ij.begin(), tmp_ij.end());
-        //circle(sum_img, Point(input_x + template_yx[i][1], template_yx[i][0]), 2, Scalar(0,200,255), 1, 4);
-        //circle(sum_img, Point(sum_xy[j][1], sum_xy[j][0]), 2, Scalar(0,200,255), 1, 4);
-        //line(sum_img, Point(input_x + template_yx[i][1], template_yx[i][0]), Point(sum_xy[j][1], sum_xy[j][0]), Scalar(0,200,255), 1, 4 );
-        //circle(sum_img, Point(input_x + template_yx[i][1], template_yx[i][0]), 2, Scalar(130), 1, 4);
-        //circle(sum_img, Point(sum_xy[j][1], sum_xy[j][0]), 2, Scalar(130), 1, 4);
-        //line(sum_img, Point(input_x + template_yx[i][1], template_yx[i][0]), Point(sum_xy[j][1], sum_xy[j][0]), Scalar(130), 1, 4 );
-
-      }
-      h = 0;
-    }
-  }
-
-
-  //クロスマッチング
-  int sums;
-  //h = 0;
-  //calc_ave = 0;
-  //calc_boundary = 0;
-  //calc_min_label = 0;
-  double calc_simi_vector = 0.0;
-
   //inlier and outlier matching
   DMatch tmp_goodMatch;
   vector<DMatch> goodMatch;
@@ -1316,45 +1342,83 @@ void TopologyFeature::featureMatching(Mat template_img, Mat input_img, vector<ve
   vector<Point2f> template_pt;
   vector<Point2f> input_pt;
 
-  cout << "second matching " << endl;
-  for(int i = 0; i < sum_ij.size(); i++){
-    sums = sum_ij[i][1];
-    for(int j = 0; j < template_keypoint_binary.size(); j++){
-      /*
-      for(int k = 0; k < template_binary[0].size(); k++){
-        h += template_binary[j][k] - keypoint_binary[sums][k];
+  matchPoint tmp_match_point;
+  vector<matchPoint> match_point;
+
+  for(int x = 0; x < template_keypoint_binary.size(); x++){
+    for(int y = 0; y < input_keypoint_binary.size(); y++){
+      for(int z = 0; z < template_keypoint_binary[x].binary.size(); z++){
+        h += template_keypoint_binary[x].binary[z] - input_keypoint_binary[y].binary[z];
         if(h != 0){
-          h = 100;
+          break;
         }
       }
-      */
-      //calc_ave = template_ave[j][0] - sum_ave_keypoint[sums][0];
-      //calc_boundary = template_boundary[j][0] - sum_boundary[sums][0];
-      //calc_min_label = template_min_label[j][0] - sum_min_label_word[sums][0];
-      //calc_simi_vector = (template_mean_vector[j][0] * sum_mean_vector[sums][0] + template_mean_vector[j][1] * sum_mean_vector[sums][1]) / (sqrt(pow(template_mean_vector[j][0],2.0) + pow(template_mean_vector[j][1], 2.0)) * sqrt(pow(sum_mean_vector[sums][0], 2.0) + pow(sum_mean_vector[sums][1], 2.0)));
-      calc_simi_vector = (template_featurepoint[j].mean_vector.x * input_featurepoint[sums].mean_vector.x + template_featurepoint[j].mean_vector.y * input_featurepoint[sums].mean_vector.y) / (sqrt(pow(template_featurepoint[j].mean_vector.x,2.0) + pow(template_featurepoint[j].mean_vector.y, 2.0)) * sqrt(pow(input_featurepoint[sums].mean_vector.x, 2.0) + pow(input_featurepoint[sums].mean_vector.y, 2.0)));
+      if(h == 0){
+        /*
+              circle(sum_img, Point(input_x + template_keypoint_binary[x].xy.x, template_keypoint_binary[x].xy.y), 2, Scalar(200), 1, 4);
+              circle(sum_img, Point(input_keypoint_binary[y].xy.x, input_keypoint_binary[y].xy.y), 2, Scalar(200), 1, 4);
+              line(sum_img, Point(input_x + template_keypoint_binary[x].xy.x, template_keypoint_binary[x].xy.y), Point(input_keypoint_binary[y].xy.x, input_keypoint_binary[y].xy.y), Scalar(200), 1, 4 );
 
-      if(sum_ij[i][0] == j){
-        if(calc_simi_vector >= 0.9){
-        circle(sum_img, Point(input_x + template_featurepoint[j].coordinate.x, template_featurepoint[j].coordinate.y), 2, Scalar(200), 1, 4);
-        circle(sum_img, Point(input_featurepoint[sums].coordinate.x, input_featurepoint[sums].coordinate.y), 2, Scalar(200), 1, 4);
-        line(sum_img, Point(input_x + template_featurepoint[j].coordinate.x, template_featurepoint[j].coordinate.y), Point(input_featurepoint[sums].coordinate.x, input_featurepoint[sums].coordinate.y), Scalar(200), 1, 4 );
-        //Homography matrix estimation
-        tmp_template_pt.pt.x = template_featurepoint[j].coordinate.x;
-        tmp_template_pt.pt.y = template_featurepoint[j].coordinate.y;
-        template_pt.push_back(tmp_template_pt.pt);
+              //Homography matrix estimation
+              tmp_template_pt.pt.x = template_keypoint_binary[x].xy.x;
+              tmp_template_pt.pt.y = template_keypoint_binary[x].xy.y;
+              template_pt.push_back(tmp_template_pt.pt);
 
-        tmp_input_pt.pt.x = input_featurepoint[sums].coordinate.x;
-        tmp_input_pt.pt.y = input_featurepoint[sums].coordinate.y;
-        input_pt.push_back(tmp_input_pt.pt);
+              tmp_input_pt.pt.x = input_keypoint_binary[y].xy.x;
+              tmp_input_pt.pt.y = input_keypoint_binary[y].xy.y;
+              input_pt.push_back(tmp_input_pt.pt);
 
-        //tmp_goodMatch.queryIdx = (int)template_yx[j][1];
-        //tmp_goodMatch.trainIdx = (int)sum_xy[sums][1];
-        goodMatch.push_back(tmp_goodMatch);
-        }
+              //tmp_goodMatch.queryIdx = (int)template_yx[j][1];
+              //tmp_goodMatch.trainIdx = (int)sum_xy[sums][1];
+              goodMatch.push_back(tmp_goodMatch);
+              */
+              tmp_match_point.template_match.x = template_keypoint_binary[x].xy.x;
+              tmp_match_point.template_match.y = template_keypoint_binary[x].xy.y;
+              tmp_match_point.input_match.x = input_keypoint_binary[y].xy.x;
+              tmp_match_point.input_match.y = input_keypoint_binary[y].xy.y;
+              match_point.push_back(tmp_match_point);
       }
+      h = 0;
     }
   }
+  for(int l = 0; l < match_point.size(); l++){
+    for(int i = 0; i < template_vector.size(); i++){
+        for(int j = 0; j < input_vector.size(); j++){
+            numerator = template_vector[i].vectorC2F.x * input_vector[j].vectorC2F.x + template_vector[i].vectorC2F.y * input_vector[j].vectorC2F.y;
+            sizes = template_vector[i].vectorSize * input_vector[j].vectorSize;
+            if(sizes >= 0){
+              simi_cos = numerator / sizes;
+            }else{
+              simi_cos = 0;
+            }
+            //cout << "simi cos = " << simi_cos << endl;
+            if(match_point[l].template_match.x == template_vector[i].pure_featurepoint.x
+              && match_point[l].template_match.y == template_vector[i].pure_featurepoint.y
+              && match_point[l].input_match.x == input_vector[j].pure_featurepoint.x
+              && match_point[l].input_match.y == input_vector[j].pure_featurepoint.y){
+            if(simi_cos == 1){
+              circle(sum_img, Point(input_x + template_vector[i].pure_featurepoint.x, template_vector[i].pure_featurepoint.y), 2, Scalar(200), 1, 4);
+              circle(sum_img, Point(input_vector[j].pure_featurepoint.x, input_vector[j].pure_featurepoint.y), 2, Scalar(200), 1, 4);
+              line(sum_img, Point(input_x + template_vector[i].pure_featurepoint.x, template_vector[i].pure_featurepoint.y), Point(input_vector[j].pure_featurepoint.x, input_vector[j].pure_featurepoint.y), Scalar(200), 1, 4 );
+
+              //Homography matrix estimation
+              tmp_template_pt.pt.x = template_vector[i].pure_featurepoint.x;
+              tmp_template_pt.pt.y = template_vector[i].pure_featurepoint.y;
+              template_pt.push_back(tmp_template_pt.pt);
+
+              tmp_input_pt.pt.x = input_vector[j].pure_featurepoint.x;
+              tmp_input_pt.pt.y = input_vector[j].pure_featurepoint.y;
+              input_pt.push_back(tmp_input_pt.pt);
+
+              //tmp_goodMatch.queryIdx = (int)template_yx[j][1];
+              //tmp_goodMatch.trainIdx = (int)sum_xy[sums][1];
+              goodMatch.push_back(tmp_goodMatch);
+            }
+            }
+        }
+      }
+  }
+
   imwrite("input_img_out/all_match_sum_img.tiff", sum_img);
   calc_Homography(template_pt, input_pt, goodMatch);
 }
