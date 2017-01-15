@@ -20,7 +20,10 @@ namespace TopologyFeature{
     struct Centroids{
       int value;//画素値
       Point centroids; //重心座標
-      Point calib_centroids;//補正した重心(calib_featurepoint()用)
+      float calib_x;//補正した重心(calib_featurepoint()用)
+      float calib_y;
+      Point vectorXY;
+      double vectorSize;
     };
 
     struct Featurepoints{
@@ -31,13 +34,17 @@ namespace TopologyFeature{
       Point mean_vector;//平均ベクトル
       int min_label_word;//領域が小さい方のラベル値
       vector<int> one_dimention_scanning;//特徴点の周囲16点
-      Point calib_coordinate; //補正した座標(calib_featurepoint用)
+      float calib_x; //補正した座標(calib_featurepoint用)
+      float calib_y;
+      Point vectorXY;
+      double vectorSize;
     };
 
     struct valueAndVector{
       int beginValue;//始点の画素値
       int endValue;//終点の画素値
       Point beginXY;//始点の座標
+      Point endXY;
       Point begin2endVector;//始点と終点のベクトル
       double vectorSize;//始点と終点のベクトルの大きさ
     };
