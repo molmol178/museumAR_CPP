@@ -6,6 +6,7 @@
 #include <math.h>
 #include <vector>
 #include <fstream>
+#include <algorithm>
 #include "topology_feature.h"
 using namespace std;
 using namespace cv;
@@ -1076,6 +1077,7 @@ void TopologyFeature::calib_featurepoint(vector<Centroids> centroids, vector<Fea
         tmp_relativeFP.vectorXY.x = featurepoint[j].coordinate.x - centroids[min_index].centroids.x;
         tmp_relativeFP.vectorXY.y = featurepoint[j].coordinate.y - centroids[min_index].centroids.y;
         tmp_relativeFP.vectorSize = sqrt(pow(tmp_relativeFP.vectorXY.x, 2.0) + pow(tmp_relativeFP.vectorXY.y, 2.0));
+        if(relativeCent[i].value != centroids[min_index].value){
         if(relativeCent[i].vectorSize > 0){
           bcos = (relativeCent[i].vectorXY.x * tmp_relativeFP.vectorXY.x + relativeCent[i].vectorXY.y * tmp_relativeFP.vectorXY.y )/ relativeCent[i].vectorSize;
           suisen_x = centroids[min_index].centroids.x + relativeCent[i].vectorXY.x * bcos / relativeCent[i].vectorSize;
@@ -1108,6 +1110,10 @@ void TopologyFeature::calib_featurepoint(vector<Centroids> centroids, vector<Fea
         else if(cos < 0 && sin < 0){
           tmp_relativeFP.calib_x = -bcos;
           tmp_relativeFP.calib_y = -tmp_calib_y;
+        }
+        }else{
+          tmp_relativeFP.calib_x = tmp_relativeFP.vectorXY.x;
+          tmp_relativeFP.calib_y = tmp_relativeFP.vectorXY.y;
         }
         tmp_relativeFP.coordinate.x = featurepoint[j].coordinate.x;
         tmp_relativeFP.coordinate.y = featurepoint[j].coordinate.y;
@@ -1338,6 +1344,15 @@ vector<TopologyFeature::cent2feature> TopologyFeature::calc_relative_centroids2f
 結果画像を出力
 ---------------------------------------------------------------------------------------------------
 */
+bool TopologyFeature::CustPredicate(matchPoint elem1, matchPoint elem2)
+{
+  if (elem1.simi_cos > elem2.simi_cos)
+    return false;
+  if (elem1.simi_cos < elem2.simi_cos)
+    return true;
+  return false;
+}
+
 void TopologyFeature::featureMatching(Mat template_img, Mat input_img, vector<keypoint> template_keypoint_binary, vector<keypoint> input_keypoint_binary,vector<cent2feature> template_vector, vector<cent2feature> input_vector){
   int input_y = input_img.rows;
   int input_x = input_img.cols;
@@ -1370,8 +1385,8 @@ void TopologyFeature::featureMatching(Mat template_img, Mat input_img, vector<ke
   vector<Point2f> template_pt;
   vector<Point2f> input_pt;
 
-  matchPoint tmp_match_point;
-  vector<matchPoint> match_point;
+  //matchPoint tmp_match_point;
+  //vector<matchPoint> match_point;
 
 /*
   for(int x = 0; x < template_keypoint_binary.size(); x++){
@@ -1413,8 +1428,8 @@ void TopologyFeature::featureMatching(Mat template_img, Mat input_img, vector<ke
     }
   }
   */
-  cout << "second_match " << endl;
-  //for(int l = 0; l < match_point.size(); l++){
+  matchPoint tmp_matching;
+  vector<matchPoint> matching;
     cout << "templatevector size = " << template_vector.size() << endl;
     cout << "inputvector size = " << input_vector.size() << endl;
     for(int i = 0; i < template_vector.size(); i++){
@@ -1428,35 +1443,105 @@ void TopologyFeature::featureMatching(Mat template_img, Mat input_img, vector<ke
               simi_cos = 0;
             }
             //cout << "simi cos = " << simi_cos << endl;
+            //cout << "template = " << template_vector[i].value << " input = " << input_vector[j].value <<endl;
             if(simi_cos >= 0.9){
-            /*if(match_point[l].template_match.x == template_vector[i].pure_featurepoint.x
-              && match_point[l].template_match.y == template_vector[i].pure_featurepoint.y
-              && match_point[l].input_match.x == input_vector[j].pure_featurepoint.x
-              && match_point[l].input_match.y == input_vector[j].pure_featurepoint.y){
-              */
-              int lucky = 1 + rand() % (255 - 1);
-              circle(sum_img, Point(input_x + template_vector[i].pure_featurepoint.x, input_y + template_vector[i].pure_featurepoint.y), 2, Scalar(lucky), 1, 4);
-              circle(sum_img, Point(input_vector[j].pure_featurepoint.x, input_vector[j].pure_featurepoint.y), 2, Scalar(lucky), 1, 4);
-              line(sum_img, Point(input_x + template_vector[i].pure_featurepoint.x, input_y + template_vector[i].pure_featurepoint.y), Point(input_vector[j].pure_featurepoint.x, input_vector[j].pure_featurepoint.y), Scalar(lucky), 1, 4 );
-
-              //Homography matrix estimation
-              tmp_template_pt.pt.x = template_vector[i].pure_featurepoint.x;
-              tmp_template_pt.pt.y = template_vector[i].pure_featurepoint.y;
-              template_pt.push_back(tmp_template_pt.pt);
-
-              tmp_input_pt.pt.x = input_vector[j].pure_featurepoint.x;
-              tmp_input_pt.pt.y = input_vector[j].pure_featurepoint.y;
-              input_pt.push_back(tmp_input_pt.pt);
-
-              //tmp_goodMatch.queryIdx = (int)template_yx[j][1];
-              //tmp_goodMatch.trainIdx = (int)sum_xy[sums][1];
-              goodMatch.push_back(tmp_goodMatch);
+              tmp_matching.template_match = template_vector[i];
+              tmp_matching.input_match = input_vector[j];
+              tmp_matching.simi_cos = simi_cos;
+              matching.push_back(tmp_matching);
+              //cout << "t x = " << tmp_matching.template_match.pure_featurepoint.x << " t y = " << tmp_matching.template_match.pure_featurepoint.y << " i x = " << tmp_matching.input_match.pure_featurepoint.x << " i y = " << tmp_matching.input_match.pure_featurepoint.y << endl; 
             }
            //}
         }
         }
       //}
   }
+  float fpx;
+  float fpy;
+  float b_fpx;
+  float b_fpy;
+  vector<matchPoint> buffer;
+  int p;
+  vector<matchPoint> template_matching;
+  for(int i = 0; i < matching.size(); i++){
+    if(i == 0){
+       fpx = matching[0].template_match.pure_featurepoint.x;
+       fpy = matching[0].template_match.pure_featurepoint.y;
+       buffer.push_back(matching[0]);
+       continue;
+    }else{
+      fpx = matching[i].template_match.pure_featurepoint.x;
+      fpy = matching[i].template_match.pure_featurepoint.y;
+    }
+    if(buffer.empty() == true){
+      buffer.push_back(matching[i]);
+    }
+    p = buffer.size()-1;
+    b_fpx = buffer[p].template_match.pure_featurepoint.x;
+    b_fpy = buffer[p].template_match.pure_featurepoint.y;
+    if(b_fpx == fpx && b_fpy == fpy){
+      buffer.push_back(matching[i]);
+    }else{
+      //bufferのなかで最もsimi_cosが大きいものをマッチング
+      stable_sort(buffer.begin() ,buffer.end(), &CustPredicate);
+      p = buffer.size()-1;
+      template_matching.push_back(buffer[p]);
+     //bufferをクリーン
+      buffer.erase(buffer.begin(), buffer.end());
+    }
+  }
+  float i_fpx;
+  float i_fpy;
+  float b_ifpx;
+  float b_ifpy;
+  vector<matchPoint> i_buffer;
+  int o;
+  for(int i = 0; i < template_matching.size(); i++){
+    if(i == 0){
+       i_fpx = template_matching[0].input_match.pure_featurepoint.x;
+       i_fpy = template_matching[0].input_match.pure_featurepoint.y;
+       i_buffer.push_back(template_matching[0]);
+       continue;
+    }else{
+      i_fpx = template_matching[i].input_match.pure_featurepoint.x;
+      i_fpy = template_matching[i].input_match.pure_featurepoint.y;
+    }
+    if(i_buffer.empty() == true){
+      i_buffer.push_back(template_matching[i]);
+    }
+    o = i_buffer.size()-1;
+    b_ifpx = i_buffer[o].input_match.pure_featurepoint.x;
+    b_ifpy = i_buffer[o].input_match.pure_featurepoint.y;
+    if(b_ifpx == i_fpx && b_ifpy == i_fpy){
+      i_buffer.push_back(template_matching[i]);
+    }else{
+      //bufferのなかで最もsimi_cosが大きいものをマッチング
+      stable_sort(i_buffer.begin() ,i_buffer.end(), &CustPredicate);
+      o = i_buffer.size()-1;
+
+      int lucky = 1 + rand() % (255 - 1);
+      circle(sum_img, Point(input_x + i_buffer[o].template_match.pure_featurepoint.x, input_y + i_buffer[o].template_match.pure_featurepoint.y), 2, Scalar(lucky), 1, 4);
+      circle(sum_img, Point(i_buffer[o].input_match.pure_featurepoint.x, i_buffer[o].input_match.pure_featurepoint.y), 2, Scalar(lucky), 1, 4);
+      line(sum_img, Point(input_x + i_buffer[o].template_match.pure_featurepoint.x, input_y + i_buffer[o].template_match.pure_featurepoint.y), Point(i_buffer[o].input_match.pure_featurepoint.x, i_buffer[o].input_match.pure_featurepoint.y), Scalar(200), 1, 4 );
+
+      //Homography matrix estimation
+      tmp_template_pt.pt.x = i_buffer[o].template_match.pure_featurepoint.x;
+      tmp_template_pt.pt.y = i_buffer[o].template_match.pure_featurepoint.y;
+      template_pt.push_back(tmp_template_pt.pt);
+
+      tmp_input_pt.pt.x = i_buffer[o].input_match.pure_featurepoint.x;
+      tmp_input_pt.pt.y = i_buffer[o].input_match.pure_featurepoint.y;
+      input_pt.push_back(tmp_input_pt.pt);
+
+      //tmp_goodMatch.queryIdx = (int)template_yx[j][1];
+      //tmp_goodMatch.trainIdx = (int)sum_xy[sums][1];
+      goodMatch.push_back(tmp_goodMatch);
+
+     //bufferをクリーン
+      i_buffer.erase(i_buffer.begin(), i_buffer.end());
+    }
+  }
+
 
   imwrite("input_img_out/all_match_sum_img.tiff", sum_img);
   calc_Homography(template_pt, input_pt, goodMatch);
@@ -1469,7 +1554,7 @@ Homographyを推定してマッチング率を算出（RANSACを使用）
 void TopologyFeature::calc_Homography(vector<Point2f> template_pt, vector<Point2f> input_pt, vector<DMatch> goodMatch){
 
   Mat masks;
-  Mat H = findHomography(template_pt, input_pt, masks, RANSAC, 3);
+  Mat H = findHomography(template_pt, input_pt, masks, RANSAC, 10);
   cout << "homography = " << H <<endl;
 
   //while(true){

@@ -57,8 +57,11 @@ namespace TopologyFeature{
     };
 
     struct matchPoint{
-      Point template_match;
-      Point input_match;
+      //Point template_match;
+      //Point input_match;
+      cent2feature template_match;
+      cent2feature input_match;
+      double simi_cos;
     };
     struct keypoint{
       Point xy;
@@ -95,6 +98,7 @@ namespace TopologyFeature{
     //void featureMatching(Mat template_img, Mat input_img, vector<vector<int> > template_keypoint_binary, vector<vector<int> > input_keypoint_binary,vector<Featurepoints> template_featurepoint, vector<Featurepoints> input_featurepoint);
     vector<cent2feature> calc_relative_centroids2featurepointVector(vector<Centroids> template_relative_centroids, vector<Featurepoints> template_relative_featurepoint);
 
+    bool CustPredicate(matchPoint elem1, matchPoint elem2);
     void featureMatching(Mat template_img, Mat input_img, vector<keypoint> template_keypoint_binary, vector<keypoint> input_keypoint_binary,vector<cent2feature> template_vector, vector<cent2feature> input_vector);
 
     void calc_Homography(vector<Point2f> template_pt, vector<Point2f> input_pt, vector<DMatch> goodMatch);
