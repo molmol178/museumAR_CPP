@@ -91,6 +91,15 @@ int main(int argc, char** argv){
   clock_t end = clock(); //処理時間計測終了
   cout << "duration = " << (double)(end - start) / CLOCKS_PER_SEC << "sec.\n";
 
+/* 
+  for(int i = 0; i < good_matches.size(); i ++ ){
+    cout << "good_match query " << good_matches[i].queryIdx << endl;
+    cout << "good_match train " << good_matches[i].trainIdx << endl;
+  }
+*/
+
+
+
   //matching ratioの計算
   Mat masks;
 

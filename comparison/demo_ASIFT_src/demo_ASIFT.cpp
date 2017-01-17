@@ -316,13 +316,13 @@ int main(int argc, char **argv)
 	if (file.is_open())
 	{		
 		// Write the number of matchings in the first line
-		file << num_matchings << std::endl;
+		//file << num_matchings << std::endl;
 		
 		matchingslist::iterator ptr = matchings.begin();
 		for(int i=0; i < (int) matchings.size(); i++, ptr++)		
 		{
-			file << zoom1*ptr->first.x << "  " << zoom1*ptr->first.y << "  " <<  zoom2*ptr->second.x << 
-			"  " <<  zoom2*ptr->second.y << std::endl;
+			file << zoom1*ptr->first.x << " " << zoom1*ptr->first.y << " " <<  zoom2*ptr->second.x << 
+			" " <<  zoom2*ptr->second.y << std::endl;
 		}		
 	}
 	else 

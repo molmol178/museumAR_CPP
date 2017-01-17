@@ -27,10 +27,13 @@ int main(int argc, char** argv){
   Mat input_img = imread(argv[1], CV_LOAD_IMAGE_COLOR);
   Mat template_img = imread(argv[2], CV_LOAD_IMAGE_COLOR);
 
+  cvtColor(input_img, input_img, CV_BGR2GRAY);
+  cvtColor(template_img, template_img, CV_BGR2GRAY);
+
 
  // SIFT・SURFモジュールの初期化
   //initModule_contrib();
-  //initModule_nonfree();
+  initModule_nonfree();
 
   //Detector初期化
   Ptr<FeatureDetector> detector = FeatureDetector::create("MSER");
@@ -90,6 +93,16 @@ int main(int argc, char** argv){
 
   clock_t end = clock(); //処理時間計測終了
   cout << "duration = " << (double)(end - start) / CLOCKS_PER_SEC << "sec.\n";
+ std::cout << "検出時間: " << time_detect << " [ms]" << std::endl;
+ std::cout << "照合時間: " << time_match << " [ms]" << std::endl;
+ 
+  for(int i = 0; i < good_matches.size(); i ++ ){
+    cout << "good_match query " << good_matches[i].queryIdx << endl;
+    cout << "good_match train " << good_matches[i].trainIdx << endl;
+
+
+
+  }
 
   //matching ratioの計算
   Mat masks;
