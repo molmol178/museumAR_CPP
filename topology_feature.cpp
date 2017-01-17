@@ -1554,7 +1554,7 @@ Homographyを推定してマッチング率を算出（RANSACを使用）
 void TopologyFeature::calc_Homography(vector<Point2f> template_pt, vector<Point2f> input_pt, vector<DMatch> goodMatch){
 
   Mat masks;
-  Mat H = findHomography(template_pt, input_pt, masks, RANSAC, 10);
+  Mat H = findHomography(template_pt, input_pt, masks, CV_LMEDS);
   cout << "homography = " << H <<endl;
 
   //while(true){

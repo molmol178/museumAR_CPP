@@ -3,11 +3,11 @@
 #include "opencv2/opencv.hpp"
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
+#include <opencv2/nonfree/nonfree.hpp>
 #include <math.h>
 #include <vector>
 #include <time.h>
 #include <fstream>
-//#include "asift.cpp"
 
 using namespace std;
 using namespace cv;
@@ -24,34 +24,13 @@ int main(int argc, char** argv){
   double time_match; // マッチングエンド時間
 
 
-  Mat input_img = imread(argv[1], CV_LOAD_IMAGE_COLOR);
-  Mat template_img = imread(argv[2], CV_LOAD_IMAGE_COLOR);
+  Mat input_img = imread(argv[1], 0);
+  Mat template_img = imread(argv[2], 0);
   string feature_name = argv[3];
-  //Mat input_img = imread(argv[1], 0);
-  //Mat template_img = imread(argv[2], 0);
-/*
-  switch (feature_name)
-  {
-    case "SIFT":
-      feature = cv::xfeatures2d::SIFT::create();
-      break;
-    case "SURF":
-      feature = cv::xfeatures2d::SURF::create();
-      break;
-    case "ORB":
-      feature = cv::ORB::create();
-      break;
-    case "BRISK":
-      feature = cv::BRISK::create();
-      break;
-    default:
-      break;
-  }
-*/
-
 
  // SIFT・SURFモジュールの初期化
-  initModule_contrib();
+  //initModule_contrib();
+  initModule_nonfree();
 
   //Detector初期化
   Ptr<FeatureDetector> detector = FeatureDetector::create(feature_name);
@@ -76,8 +55,8 @@ int main(int argc, char** argv){
 
   // DescriptorMatcherオブジェクトの生成
   //Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create("FlannBased");
-  //Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create("BruteForce");
-  Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create("BruteForce-Hamming");
+  Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create("BruteForce");
+  //Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create("BruteForce-Hamming");
   vector<vector<DMatch> > knn_matches;
 
   time_s = cv::getTickCount(); // 時間計測 Start
@@ -116,7 +95,7 @@ int main(int argc, char** argv){
   Mat masks;
 
   if (match_point1.size() >= 4 && match_point2.size() >= 4) {
-    Mat H = findHomography(match_point1, match_point2, masks, RANSAC, 3);
+    Mat H = findHomography(match_point1, match_point2, masks, CV_LMEDS);
     cout << "homography = " << H <<endl;
   }
 
@@ -133,7 +112,7 @@ int main(int argc, char** argv){
   }
   cout << "inlinerMatch count = "<< inlinerMatch.size() <<endl;
   cout << "allMatch count = " << good_matches.size() << endl;
-  double inliner = inlinerMatch.size();
+  double inliner = inlinerMatch.size() * 1.0;
   double good = good_matches.size();
   double matching_ratio = inliner / good;
   cout << "matching ratio = " << matching_ratio << endl;
