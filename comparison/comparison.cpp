@@ -13,16 +13,19 @@ using namespace std;
 using namespace cv;
 
 int main(int argc, char** argv){
-  clock_t start = clock(); //処理時間計測開始
+  //clock_t start = clock(); //処理時間計測開始
 
 
   // 時間計算のための周波数
   double f = 1000.0 / cv::getTickFrequency();
+  int64 time_all = cv::getTickCount(); // 時間計測 Start
+
 
   int64 time_s; //スタート時間
   double time_detect; // 検出エンド時間
   double time_match; // マッチングエンド時間
-
+  double time_desc;
+  double time_alls;
 
   Mat input_img = imread(argv[1], 0);
   Mat template_img = imread(argv[2], 0);
@@ -48,9 +51,12 @@ int main(int argc, char** argv){
   time_s = cv::getTickCount(); // 時間計測 Start
 
   detector->detect(template_img, template_keypoints);
-  extractor->compute(template_img, template_keypoints, template_descriptor);
-
   time_detect = (cv::getTickCount() - time_s)*f; // 時間計測 Stop
+
+  time_s = cv::getTickCount(); // 時間計測 Start
+
+  extractor->compute(template_img, template_keypoints, template_descriptor);
+  time_desc = (cv::getTickCount() - time_s)*f; // 時間計測 Stop
 
 
   // DescriptorMatcherオブジェクトの生成
@@ -63,8 +69,6 @@ int main(int argc, char** argv){
 
   // 上位2点
   matcher->knnMatch(input_descriptor, template_descriptor, knn_matches, 2);
-  time_match = (cv::getTickCount() - time_s)*f; // 時間計測 Stop
-
   //対応点を絞る
   const double match_par = 0.6; //対応点のしきい値
   vector<DMatch> good_matches;
@@ -83,18 +87,25 @@ int main(int argc, char** argv){
        match_point2.push_back(template_keypoints[knn_matches[i][0].trainIdx].pt);
     }
   }
+  time_match = (cv::getTickCount() - time_s)*f; // 時間計測 Stop
+
+
+  time_alls = (cv::getTickCount() - time_all)*f; // 時間計測 Stop
+  //cout << ","<< time_detect << "," << time_desc << "," << time_match << "," << time_alls << endl; 
+  //cout << "," <<  input_keypoints.size() << "," << template_keypoints.size() << endl; 
+
   // マッチング結果画像の作成
   Mat result;
   drawMatches(input_img, input_keypoints, template_img, template_keypoints, good_matches, result);
   imwrite("matching.png", result);
 
-  clock_t end = clock(); //処理時間計測終了
-  cout << "duration = " << (double)(end - start) / CLOCKS_PER_SEC << "sec.\n";
+  //clock_t end = clock(); //処理時間計測終了
+  //cout << "duration = " << (double)(end - start) / CLOCKS_PER_SEC << "sec.\n";
 
 /* 
   for(int i = 0; i < good_matches.size(); i ++ ){
-    cout << "good_match query " << good_matches[i].queryIdx << endl;
-    cout << "good_match train " << good_matches[i].trainIdx << endl;
+    //cout << "good_match query " << good_matches[i].queryIdx << endl;
+    //cout << "good_match train " << good_matches[i].trainIdx << endl;
   }
 */
 
@@ -105,7 +116,7 @@ int main(int argc, char** argv){
 
   if (match_point1.size() >= 4 && match_point2.size() >= 4) {
     Mat H = findHomography(match_point1, match_point2, masks, CV_LMEDS);
-    cout << "homography = " << H <<endl;
+    //cout << "homography = " << H <<endl;
   }
 
   //while(true){
@@ -119,12 +130,12 @@ int main(int argc, char** argv){
       inlinerMatch.push_back(good_matches[i]);
     }
   }
-  cout << "inlinerMatch count = "<< inlinerMatch.size() <<endl;
-  cout << "allMatch count = " << good_matches.size() << endl;
+  //cout << "inlinerMatch count = "<< inlinerMatch.size() <<endl;
+  //cout << "allMatch count = " << good_matches.size() << endl;
   double inliner = inlinerMatch.size() * 1.0;
   double good = good_matches.size();
   double matching_ratio = inliner / good;
-  cout << "matching ratio = " << matching_ratio << endl;
+  //cout << "matching ratio = " << matching_ratio << endl;
 
   //inlinerのみ表示
   Mat inliner_result;

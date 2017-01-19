@@ -82,7 +82,10 @@ int main(int argc, char **argv)
 				  << " ******************************************************************************* " << std::endl;
         return 1;
     }
-	
+
+  clock_t all_s = clock();
+
+
 	//////////////////////////////////////////////// Input
 	// Read image1
     float * iarr1;
@@ -121,8 +124,8 @@ int main(int argc, char **argv)
 	
 	if ((argc == 8) || (flag_resize != 0))
 	{
-		cout << "WARNING: The input images are resized to " << wS << "x" << hS << " for ASIFT. " << endl 
-		<< "         But the results will be normalized to the original image size." << endl << endl;
+		//cout << "WARNING: The input images are resized to " << wS << "x" << hS << " for ASIFT. " << endl 
+		//<< "         But the results will be normalized to the original image size." << endl << endl;
 		
 		float InitSigma_aa = 1.6;
 		
@@ -230,25 +233,36 @@ int main(int argc, char **argv)
 	int num_keys1=0, num_keys2=0;
 	
 	
-	cout << "Computing keypoints on the two images..." << endl;
-	time_t tstart, tend;	
-	tstart = time(0);
-
+	//cout << "Computing keypoints on the two images..." << endl;
 	num_keys1 = compute_asift_keypoints(ipixels1_zoom, wS1, hS1, num_of_tilts1, verb, keys1, siftparameters);
+  clock_t detec_s = clock();
+
 	num_keys2 = compute_asift_keypoints(ipixels2_zoom, wS2, hS2, num_of_tilts2, verb, keys2, siftparameters);
-	
-	tend = time(0);
-	cout << "Keypoints computation accomplished in " << difftime(tend, tstart) << " seconds." << endl;
+
+  clock_t detec_e = clock();
+  cout << "," << (double)(detec_e - detec_s)/ CLOCKS_PER_SEC * 1000;
+	//cout << "Keypoints computation accomplished in " << difftime(tend, tstart) << " seconds." << endl;
 	
 	//// Match ASIFT keypoints
 	int num_matchings;
 	matchingslist matchings;	
-	cout << "Matching the keypoints..." << endl;
-	tstart = time(0);
+	//cout << "Matching the keypoints..." << endl;
+
+  clock_t match_s = clock();
 	num_matchings = compute_asift_matches(num_of_tilts1, num_of_tilts2, wS1, hS1, wS2, 
 										  hS2, verb, keys1, keys2, matchings, siftparameters);
-	tend = time(0);
-	cout << "Keypoints matching accomplished in " << difftime(tend, tstart) << " seconds." << endl;
+
+  clock_t match_e = clock();
+
+
+  cout << "," << (double)(match_e - match_s)/ CLOCKS_PER_SEC *1000;
+  clock_t all_e = clock();
+  cout << "," << (double)(all_e - all_s)/ CLOCKS_PER_SEC *1000;
+
+  //cout << ","<< time_detect << "," << time_match << "," << time_alls << endl; 
+
+
+	//cout << "Keypoints matching accomplished in " << difftime(tend, tstart) << " seconds." << endl;
 	
 	///////////////// Output image containing line matches (the two images are concatenated one above the other)
 	int band_w = 20; // insert a black band of width band_w between the two images for better visibility

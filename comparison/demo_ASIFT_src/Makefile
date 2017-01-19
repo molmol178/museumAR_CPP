@@ -22,7 +22,7 @@ BIN	= demo_ASIFT
 default	: $(BIN)
 
 # C optimization flags
-COPT	= -O3 -ftree-vectorize -funroll-loops
+COPT	= -O3 -ftree-vectorize -funroll-loops 
 
 # C++ optimization flags
 CXXOPT	= $(COPT)
