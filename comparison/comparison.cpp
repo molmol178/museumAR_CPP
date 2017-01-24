@@ -58,7 +58,7 @@ int main(int argc, char** argv){
   extractor->compute(template_img, template_keypoints, template_descriptor);
   time_desc = (cv::getTickCount() - time_s)*f; // 時間計測 Stop
 
-
+  cout << "keypoint_count " << template_keypoints.size() << endl;
   // DescriptorMatcherオブジェクトの生成
   //Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create("FlannBased");
   Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create("BruteForce");
@@ -130,12 +130,12 @@ int main(int argc, char** argv){
       inlinerMatch.push_back(good_matches[i]);
     }
   }
-  //cout << "inlinerMatch count = "<< inlinerMatch.size() <<endl;
-  //cout << "allMatch count = " << good_matches.size() << endl;
+  cout << "inlinerMatch count = "<< inlinerMatch.size() <<endl;
+  cout << "allMatch count = " << good_matches.size() << endl;
   double inliner = inlinerMatch.size() * 1.0;
   double good = good_matches.size();
   double matching_ratio = inliner / good;
-  //cout << "matching ratio = " << matching_ratio << endl;
+  cout << "matching ratio = " << matching_ratio << endl;
 
   //inlinerのみ表示
   Mat inliner_result;
