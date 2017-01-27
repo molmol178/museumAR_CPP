@@ -14,46 +14,52 @@ namespace TopologyFeature{
     //calcCentroid用の構造体
     struct Value_xy{
       int value; //画素値
-      Point focus_pt; //座標
+      Point2f focus_pt; //座標
     };
 
     struct Centroids{
       int value;//画素値
-      Point centroids; //重心座標
+      Point2f centroids; //重心座標
       float calib_x;//補正した重心(calib_featurepoint()用)
       float calib_y;
-      Point vectorXY;
+      Point2f vectorXY;
       double vectorSize;
     };
 
     struct Featurepoints{
-      int value;//画素値
-      Point coordinate; //座標
+      vector<int> value;//画素値
+      Point2f coordinate; //座標
       int boundary;//境界 2 or 3
       double ave_keypoint;//平均値
-      Point mean_vector;//平均ベクトル
+      Point2f mean_vector;//平均ベクトル
+      double mean_vector_size;
       int min_label_word;//領域が小さい方のラベル値
       vector<int> one_dimention_scanning;//特徴点の周囲16点
       float calib_x; //補正した座標(calib_featurepoint用)
       float calib_y;
-      Point vectorXY;
+      Point2f vectorXY;
       double vectorSize;
     };
 
     struct valueAndVector{
       int beginValue;//始点の画素値
       int endValue;//終点の画素値
-      Point beginXY;//始点の座標
-      Point endXY;
-      Point begin2endVector;//始点と終点のベクトル
+      Point2f beginXY;//始点の座標
+      Point2f endXY;
+      Point2f begin2endVector;//始点と終点のベクトル
       double vectorSize;//始点と終点のベクトルの大きさ
     };
 
     struct cent2feature{
       int value;
-      Point vectorC2F;
-      Point pure_featurepoint;
+      Point2f vectorC2F;
+      Point2f pure_featurepoint;
       double vectorSize;
+      vector<int> word_list;
+      int min_label_word;
+      Point2f mean_vector;//平均ベクトル
+      double mean_vector_size;
+
     };
 
     struct matchPoint{
@@ -64,14 +70,14 @@ namespace TopologyFeature{
       double simi_cos;
     };
     struct keypoint{
-      Point xy;
+      Point2f xy;
       vector<int> binary;
     };
 
     struct simiCos{
       int beginValue;//始点の画素値
       int endValue;//終点の画素値
-      Point coordinate; //座標
+      Point2f coordinate; //座標
       double simi_cos;//コサインのシミラリティ
     };
 
@@ -84,12 +90,18 @@ namespace TopologyFeature{
     void calib_featurepoint(vector<Centroids> centroids, vector<Featurepoints> featurepoint,Mat img, vector<Centroids> *p_relative_centroids, vector<Featurepoints> *p_relative_featurepoint );
 
 
-    vector<Featurepoints> featureDetection(int patch_size, Mat changed_label_img);
+    vector<Featurepoints> featureDetection(int patchsize, Mat changed_label_img);
 
-    void calcMeanVector(int x, int y, int min_label_word, vector<int> label_one_dimention_scanning, Featurepoints *tmp_featurepoint);
+    //void calcMeanVector(int x, int y, int min_label_word, vector<int> label_one_dimention_scanning, Featurepoints *tmp_featurepoint);
+    void calcMeanVector(Featurepoints *tmp_relativeFP);
 
 
-    vector<Featurepoints> saveFeaturePoint(int x, int y, int min_word, int min_label_word, vector<int> one_dimention_scanning, vector<int> word_list, int tmp_boundary, vector<Featurepoints> featurepoint, int scanning_center);
+
+
+    //vector<Featurepoints> saveFeaturePoint(int x, int y, int min_word, int min_label_word, vector<int> one_dimention_scanning, vector<int> word_list, int tmp_boundary, vector<Featurepoints> featurepoint, int scanning_center);
+    vector<Featurepoints> saveFeaturePoint(int x, int y, int min_label_word, vector<int> one_dimention_scanning, vector<int> word_list, int tmp_boundary, vector<Featurepoints> featurepoint, int scanning_center);
+
+
 
 
     void writeFeaturePoint(Mat template_img, vector<Featurepoints> featurepoint, string filepath);
@@ -101,7 +113,9 @@ namespace TopologyFeature{
     bool CustPredicate(matchPoint elem1, matchPoint elem2);
     void featureMatching(Mat template_img, Mat input_img, vector<keypoint> template_keypoint_binary, vector<keypoint> input_keypoint_binary,vector<cent2feature> template_vector, vector<cent2feature> input_vector);
 
-    void calc_Homography(vector<Point2f> template_pt, vector<Point2f> input_pt, vector<DMatch> goodMatch);
+    void calc_Homography(Mat sum_img, vector<Point2f> template_pt, vector<Point2f> input_pt, vector<DMatch> goodMatch);
+    void putText(Mat sum_img, double matching_ratio, double inlier, double all);
+
     vector<int> oned_intCsvReader(string filePath);
     vector<vector<int> > twod_intCsvReader(string filePath);
     vector<vector<double> > twod_doubleCsvReader(string filePath);

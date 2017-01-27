@@ -383,7 +383,8 @@ Mat TopologyFeature::cleanLabelImage(Mat dst_data, int patch_size){
   for(int y = 0; y < y_size; y++){
     for(int x = 0; x < x_size; x++){
       dst_xy = dst_data.at<unsigned short>(y, x);
-      if (label_list[dst_xy] < patch_size/2 * patch_size/2 * M_PI){
+      double circle = patch_size / 2 * patch_size / 2 * M_PI;
+      if (label_list[dst_xy] < circle){
         dst_data.at<unsigned short>(y,x) = 0;
       }
     }
@@ -425,8 +426,6 @@ Mat TopologyFeature::cleanLabelImage(Mat dst_data, int patch_size){
       }
     }
   }
-
-
   //２回目のスキャン．右下から左上へ
   int dst_down;
   int dst_right;
@@ -468,8 +467,8 @@ Mat TopologyFeature::cleanLabelImage(Mat dst_data, int patch_size){
       }
     }
   }
-
-  return dst_data;
+  Mat test = dst_data.clone();
+  return test;
 }
 /*
 ---------------------------------------------------------------------------------------------------
@@ -530,6 +529,22 @@ unsigned short型の画像にランダムな値を入れてunsigned charで書�
 ---------------------------------------------------------------------------------------------------
 */
 Mat TopologyFeature::writeDstData(Mat clean_label_img){
+  Mat UC_last_label_img = Mat(clean_label_img.rows, clean_label_img.cols, CV_8UC1);
+  int label_value;
+  for(int y = 0; y < clean_label_img.rows; y++){
+    for(int x = 0; x < clean_label_img.cols; x++){
+      label_value = clean_label_img.at<unsigned short>(y, x);
+      label_value = label_value * 30;
+      if (label_value <= 255){
+        UC_last_label_img.at<unsigned char>(y,x) = label_value;
+      }else{
+        UC_last_label_img.at<unsigned char>(y,x) = 0;
+      }
+    }
+  }
+  return UC_last_label_img;
+
+/*
   int y_size = clean_label_img.rows;
   int x_size = clean_label_img.cols;
   Mat changed_label_img = Mat(y_size, x_size, CV_8UC1);
@@ -560,6 +575,7 @@ Mat TopologyFeature::writeDstData(Mat clean_label_img){
     }
   }
   return changed_label_img;
+*/
 }
 /*
 ---------------------------------------------------------------------------------------------------
@@ -734,7 +750,7 @@ vector<TopologyFeature::Featurepoints> TopologyFeature::featureDetection(int pat
                   //word_listの合計を求める
                   int tmp_boundary = 2;
                   int min_label_word = word_list[cnt_minIndex];
-                  featurepoint = saveFeaturePoint(x, y, min_word, min_label_word, one_dimention_scanning, word_list, tmp_boundary, featurepoint, scanning_center);
+                  featurepoint = saveFeaturePoint(x, y, min_word, one_dimention_scanning, word_list, tmp_boundary, featurepoint, scanning_center);
                 }
               }
             }
@@ -743,7 +759,7 @@ vector<TopologyFeature::Featurepoints> TopologyFeature::featureDetection(int pat
                   featurepoint_cnt ++;
                 int tmp_boundary = 3;
                 int min_label_word = word_list[cnt_minIndex];
-                featurepoint = saveFeaturePoint(x, y, min_word, min_label_word, one_dimention_scanning, word_list, tmp_boundary, featurepoint, scanning_center);
+                featurepoint = saveFeaturePoint(x, y,  min_word,one_dimention_scanning, word_list, tmp_boundary, featurepoint, scanning_center);
                 }
               //patch_sizeによって変わる
               if (one_dimention_scanning[0] == one_dimention_scanning[15] && scanning_center == word_list[cnt_minIndex]){
@@ -752,7 +768,7 @@ vector<TopologyFeature::Featurepoints> TopologyFeature::featureDetection(int pat
                   featurepoint_cnt ++;
                 int tmp_boundary = 2;
                 int min_label_word = word_list[cnt_minIndex];
-                featurepoint = saveFeaturePoint(x, y, min_word, min_label_word, one_dimention_scanning, word_list, tmp_boundary, featurepoint, scanning_center);
+                featurepoint = saveFeaturePoint(x, y,  min_word,one_dimention_scanning, word_list, tmp_boundary, featurepoint, scanning_center);
                 }
               }
           }
@@ -763,7 +779,7 @@ vector<TopologyFeature::Featurepoints> TopologyFeature::featureDetection(int pat
                 //最も小さいラベルが120度以下
                 int tmp_boundary = 3;
                 int min_label_word = word_list[cnt_minIndex];
-                featurepoint = saveFeaturePoint(x, y, min_word, min_label_word, one_dimention_scanning, word_list, tmp_boundary, featurepoint, scanning_center);
+                featurepoint = saveFeaturePoint(x, y,  min_word,one_dimention_scanning, word_list, tmp_boundary, featurepoint, scanning_center);
               }
            }
         }
@@ -778,35 +794,37 @@ vector<TopologyFeature::Featurepoints> TopologyFeature::featureDetection(int pat
 検出した特徴点を保存する
 ---------------------------------------------------------------------------------------------------
 */
-vector<TopologyFeature::Featurepoints> TopologyFeature::saveFeaturePoint(int x, int y, int min_word, int min_label_word, vector<int> one_dimention_scanning, vector<int> word_list, int tmp_boundary, vector<Featurepoints> featurepoint, int scanning_center){
+vector<TopologyFeature::Featurepoints> TopologyFeature::saveFeaturePoint(int x, int y, int min_label_word, vector<int> one_dimention_scanning, vector<int> word_list, int tmp_boundary, vector<Featurepoints> featurepoint, int scanning_center){
 
 
   Featurepoints tmp_featurepoint;
 
   tmp_featurepoint.one_dimention_scanning = one_dimention_scanning;
   //tmp_featurepoint.value = scanning_center;
-  tmp_featurepoint.value = min_word;
+  //tmp_featurepoint.value = min_word;
 
 
-  float words_sum = 0;
-  for (int words = 0; words < word_list.size(); words++){
-    words_sum += word_list[words];
-  }
+  //float words_sum = 0;
+  //for (int words = 0; words < word_list.size(); words++){
+  //  words_sum += word_list[words];
+  //}
 
   //word_listの平均を求める
-  float ave_keypoint = words_sum / word_list.size();
-  tmp_featurepoint.ave_keypoint = ave_keypoint;
+  //float ave_keypoint = words_sum / word_list.size();
+  //tmp_featurepoint.ave_keypoint = ave_keypoint;
 
+  stable_sort(word_list.begin(), word_list.end());
+  tmp_featurepoint.value= word_list;
 
   //patch_sizeによって変わる
   tmp_featurepoint.coordinate.y = y+3;
   tmp_featurepoint.coordinate.x = x+3;
 
-  tmp_featurepoint.boundary = tmp_boundary;
+  //tmp_featurepoint.boundary = tmp_boundary;
 
   tmp_featurepoint.min_label_word = min_label_word;
 
-  calcMeanVector(x, y, min_label_word, one_dimention_scanning, &tmp_featurepoint);
+  //calcMeanVector(x, y, min_label_word, one_dimention_scanning, &tmp_featurepoint);
 
   featurepoint.push_back(tmp_featurepoint);
   return featurepoint;
@@ -817,8 +835,8 @@ vector<TopologyFeature::Featurepoints> TopologyFeature::saveFeaturePoint(int x, 
 検出した特徴点の小さい方のラベルがキーポイントの中心に対して作る平均ベクトルを求める．
 ---------------------------------------------------------------------------------------------------
 */
-void TopologyFeature::calcMeanVector(int x, int y, int min_label_word, vector<int> label_one_dimention_scanning, Featurepoints *tmp_featurepoint){
-
+//void TopologyFeature::calcMeanVector(int x, int y, int min_label_word, vector<int> label_one_dimention_scanning, Featurepoints *tmp_featurepoint){
+void TopologyFeature::calcMeanVector(Featurepoints *tmp_relativeFP){
 
   vector<vector<int> > sum_min_label_coordinate;
   vector<int> tmp_min_label_coordinate;
@@ -827,9 +845,8 @@ void TopologyFeature::calcMeanVector(int x, int y, int min_label_word, vector<in
   //cout << "--------------------------------------------------------------------" << endl;
   //cout<< "min label word = " << min_label_word << endl;
 
-  for(int i = 0; i < label_one_dimention_scanning.size(); i++){
+  for(int i = 0; i < tmp_relativeFP->one_dimention_scanning.size(); i++){
     //cout << "label_one_dimention_scanning" << endl;
-    //cout << label_one_dimention_scanning[i] << ", " << endl;
     //cout << "x = " << x << "y = " << y <<endl;
     //cout << "i = " << i << endl;
 
@@ -838,100 +855,148 @@ void TopologyFeature::calcMeanVector(int x, int y, int min_label_word, vector<in
     //  cout << tmp_min_label_coordinate[j] << ", ";
     //}
     //cout << endl;
-    if(min_label_word ==  label_one_dimention_scanning[i]){
+    if(tmp_relativeFP->min_label_word == tmp_relativeFP->one_dimention_scanning[i]){
       if(i == 0){
-        tmp_min_label_coordinate.push_back(y+0);
-        tmp_min_label_coordinate.push_back(x+3);
+        //tmp_min_label_coordinate.push_back(tmp_relativeFP->calib_y + 3);
+        //tmp_min_label_coordinate.push_back(tmp_relativeFP->calib_x + 0);
+
+        tmp_min_label_coordinate.push_back(3);
+        tmp_min_label_coordinate.push_back(0);
         sum_min_label_coordinate.push_back(tmp_min_label_coordinate);
         tmp_min_label_coordinate.erase(tmp_min_label_coordinate.begin(), tmp_min_label_coordinate.end());
       }
       else if(i == 1){
-        tmp_min_label_coordinate.push_back(y+0);
-        tmp_min_label_coordinate.push_back(x+4);
+        //tmp_min_label_coordinate.push_back(tmp_relativeFP->calib_y + 3);
+        //tmp_min_label_coordinate.push_back(tmp_relativeFP->calib_x + 1);
+
+        tmp_min_label_coordinate.push_back(3);
+        tmp_min_label_coordinate.push_back(1);
         sum_min_label_coordinate.push_back(tmp_min_label_coordinate);
         tmp_min_label_coordinate.erase(tmp_min_label_coordinate.begin(), tmp_min_label_coordinate.end());
       }
       else if(i == 2){
-        tmp_min_label_coordinate.push_back(y+1);
-        tmp_min_label_coordinate.push_back(x+5);
+        //tmp_min_label_coordinate.push_back(tmp_relativeFP->calib_y + 2);
+        //tmp_min_label_coordinate.push_back(tmp_relativeFP->calib_x + 2);
+
+        tmp_min_label_coordinate.push_back(2);
+        tmp_min_label_coordinate.push_back(2);
         sum_min_label_coordinate.push_back(tmp_min_label_coordinate);
         tmp_min_label_coordinate.erase(tmp_min_label_coordinate.begin(), tmp_min_label_coordinate.end());
       }
       else if(i == 3){
-        tmp_min_label_coordinate.push_back(y+2);
-        tmp_min_label_coordinate.push_back(x+6);
+        //tmp_min_label_coordinate.push_back(tmp_relativeFP->calib_y + 1);
+        //tmp_min_label_coordinate.push_back(tmp_relativeFP->calib_x + 3);
+
+        tmp_min_label_coordinate.push_back(1);
+        tmp_min_label_coordinate.push_back(3);
         sum_min_label_coordinate.push_back(tmp_min_label_coordinate);
         tmp_min_label_coordinate.erase(tmp_min_label_coordinate.begin(), tmp_min_label_coordinate.end());
       }
       else if(i == 4){
-        tmp_min_label_coordinate.push_back(y+3);
-        tmp_min_label_coordinate.push_back(x+6);
+        //tmp_min_label_coordinate.push_back(tmp_relativeFP->calib_y + 0);
+        //tmp_min_label_coordinate.push_back(tmp_relativeFP->calib_x + 3);
+
+        tmp_min_label_coordinate.push_back(0);
+        tmp_min_label_coordinate.push_back(3);
         sum_min_label_coordinate.push_back(tmp_min_label_coordinate);
         tmp_min_label_coordinate.erase(tmp_min_label_coordinate.begin(), tmp_min_label_coordinate.end());
       }
       else if(i == 5){
-        tmp_min_label_coordinate.push_back(y+4);
-        tmp_min_label_coordinate.push_back(x+6);
+        //tmp_min_label_coordinate.push_back(tmp_relativeFP->calib_y - 1);
+        //tmp_min_label_coordinate.push_back(tmp_relativeFP->calib_x + 3);
+
+        tmp_min_label_coordinate.push_back(-1);
+        tmp_min_label_coordinate.push_back(3);
         sum_min_label_coordinate.push_back(tmp_min_label_coordinate);
         tmp_min_label_coordinate.erase(tmp_min_label_coordinate.begin(), tmp_min_label_coordinate.end());
       }
       else if(i == 6){
-        tmp_min_label_coordinate.push_back(y+5);
-        tmp_min_label_coordinate.push_back(x+5);
+        //tmp_min_label_coordinate.push_back(tmp_relativeFP->calib_y - 1);
+        //tmp_min_label_coordinate.push_back(tmp_relativeFP->calib_x + 2);
+
+        tmp_min_label_coordinate.push_back(-1);
+        tmp_min_label_coordinate.push_back(2);
         sum_min_label_coordinate.push_back(tmp_min_label_coordinate);
         tmp_min_label_coordinate.erase(tmp_min_label_coordinate.begin(), tmp_min_label_coordinate.end());
       }
       else if(i == 7){
-        tmp_min_label_coordinate.push_back(y+6);
-        tmp_min_label_coordinate.push_back(x+4);
+        //tmp_min_label_coordinate.push_back(tmp_relativeFP->calib_y - 3);
+        //tmp_min_label_coordinate.push_back(tmp_relativeFP->calib_x + 1);
+
+        tmp_min_label_coordinate.push_back(-3);
+        tmp_min_label_coordinate.push_back(1);
         sum_min_label_coordinate.push_back(tmp_min_label_coordinate);
         tmp_min_label_coordinate.erase(tmp_min_label_coordinate.begin(), tmp_min_label_coordinate.end());
       }
       else if(i == 8){
-        tmp_min_label_coordinate.push_back(y+6);
-        tmp_min_label_coordinate.push_back(x+3);
+        //tmp_min_label_coordinate.push_back(tmp_relativeFP->calib_y - 3);
+        //tmp_min_label_coordinate.push_back(tmp_relativeFP->calib_x + 0);
+
+        tmp_min_label_coordinate.push_back(-3);
+        tmp_min_label_coordinate.push_back(0);
         sum_min_label_coordinate.push_back(tmp_min_label_coordinate);
         tmp_min_label_coordinate.erase(tmp_min_label_coordinate.begin(), tmp_min_label_coordinate.end());
       }
       else if(i == 9){
-        tmp_min_label_coordinate.push_back(y+6);
-        tmp_min_label_coordinate.push_back(x+2);
+        //tmp_min_label_coordinate.push_back(tmp_relativeFP->calib_y - 3);
+        //tmp_min_label_coordinate.push_back(tmp_relativeFP->calib_x - 1);
+
+        tmp_min_label_coordinate.push_back(-3);
+        tmp_min_label_coordinate.push_back(-1);
         sum_min_label_coordinate.push_back(tmp_min_label_coordinate);
         tmp_min_label_coordinate.erase(tmp_min_label_coordinate.begin(), tmp_min_label_coordinate.end());
       }
       else if(i == 10){
-        tmp_min_label_coordinate.push_back(y+5);
-        tmp_min_label_coordinate.push_back(x+1);
+        //tmp_min_label_coordinate.push_back(tmp_relativeFP->calib_y - 2);
+        //tmp_min_label_coordinate.push_back(tmp_relativeFP->calib_x - 2);
+
+        tmp_min_label_coordinate.push_back(-2);
+        tmp_min_label_coordinate.push_back(-2);
         sum_min_label_coordinate.push_back(tmp_min_label_coordinate);
         tmp_min_label_coordinate.erase(tmp_min_label_coordinate.begin(), tmp_min_label_coordinate.end());
       }
       else if(i == 11){
-        tmp_min_label_coordinate.push_back(y+4);
-        tmp_min_label_coordinate.push_back(x+0);
+        //tmp_min_label_coordinate.push_back(tmp_relativeFP->calib_y - 1);
+        //tmp_min_label_coordinate.push_back(tmp_relativeFP->calib_x - 3);
+
+        tmp_min_label_coordinate.push_back(-1);
+        tmp_min_label_coordinate.push_back(-3);
         sum_min_label_coordinate.push_back(tmp_min_label_coordinate);
         tmp_min_label_coordinate.erase(tmp_min_label_coordinate.begin(), tmp_min_label_coordinate.end());
       }
       else if(i == 12){
-        tmp_min_label_coordinate.push_back(y+3);
-        tmp_min_label_coordinate.push_back(x+0);
+        //tmp_min_label_coordinate.push_back(tmp_relativeFP->calib_y + 0);
+        //tmp_min_label_coordinate.push_back(tmp_relativeFP->calib_x - 3);
+
+        tmp_min_label_coordinate.push_back(0);
+        tmp_min_label_coordinate.push_back(-3);
         sum_min_label_coordinate.push_back(tmp_min_label_coordinate);
         tmp_min_label_coordinate.erase(tmp_min_label_coordinate.begin(), tmp_min_label_coordinate.end());
       }
       else if(i == 13){
-        tmp_min_label_coordinate.push_back(y+2);
-        tmp_min_label_coordinate.push_back(x+0);
+        //tmp_min_label_coordinate.push_back(tmp_relativeFP->calib_y + 1);
+        //tmp_min_label_coordinate.push_back(tmp_relativeFP->calib_x - 3);
+
+        tmp_min_label_coordinate.push_back(1);
+        tmp_min_label_coordinate.push_back(-3);
         sum_min_label_coordinate.push_back(tmp_min_label_coordinate);
         tmp_min_label_coordinate.erase(tmp_min_label_coordinate.begin(), tmp_min_label_coordinate.end());
       }
       else if(i == 14){
-        tmp_min_label_coordinate.push_back(y+1);
-        tmp_min_label_coordinate.push_back(x+1);
+        //tmp_min_label_coordinate.push_back(tmp_relativeFP->calib_y + 2);
+        //tmp_min_label_coordinate.push_back(tmp_relativeFP->calib_x - 2);
+
+        tmp_min_label_coordinate.push_back(2);
+        tmp_min_label_coordinate.push_back(-2);
         sum_min_label_coordinate.push_back(tmp_min_label_coordinate);
         tmp_min_label_coordinate.erase(tmp_min_label_coordinate.begin(), tmp_min_label_coordinate.end());
       }
       else if(i == 15){
-        tmp_min_label_coordinate.push_back(y+0);
-        tmp_min_label_coordinate.push_back(x+2);
+        //tmp_min_label_coordinate.push_back(tmp_relativeFP->calib_y + 3);
+        //tmp_min_label_coordinate.push_back(tmp_relativeFP->calib_x - 1);
+
+        tmp_min_label_coordinate.push_back(3);
+        tmp_min_label_coordinate.push_back(-1);
         sum_min_label_coordinate.push_back(tmp_min_label_coordinate);
         tmp_min_label_coordinate.erase(tmp_min_label_coordinate.begin(), tmp_min_label_coordinate.end());
       }
@@ -953,16 +1018,35 @@ void TopologyFeature::calcMeanVector(int x, int y, int min_label_word, vector<in
   int sum_y_vector = 0;
   int sum_x_vector = 0;
   int cnt_vector = 0;
+  int mean_y = 0;
+  int mean_x = 0;
+  double mean_size;
   for(int j = 0; j < sum_min_label_coordinate.size(); j ++){
     //中心とパッチの小さい方のベクトルを計算
-    y_vector = sum_min_label_coordinate[j][0] - (y + 3);
-    x_vector = sum_min_label_coordinate[j][1] - (x + 3);
+    y_vector = sum_min_label_coordinate[j][0] - (tmp_relativeFP->calib_y);
+    x_vector = sum_min_label_coordinate[j][1] - (tmp_relativeFP->calib_x);
+
+    //y_vector = sum_min_label_coordinate[j][0];
+    //x_vector = sum_min_label_coordinate[j][1];
     sum_y_vector += y_vector;
     sum_x_vector += x_vector;
     cnt_vector ++;
   }
-  tmp_featurepoint->mean_vector.y = sum_y_vector/ cnt_vector;
-  tmp_featurepoint->mean_vector.x = sum_x_vector/ cnt_vector;
+  if(cnt_vector > 0){
+    mean_y = sum_y_vector/ cnt_vector;
+    mean_x = sum_x_vector/ cnt_vector;
+  }else{
+    mean_y = 0;
+    mean_x = 0;
+  }
+
+  mean_size = sqrt(pow(mean_x, 2.0) + pow(mean_y, 2.0));
+
+  cout << "y = " << mean_y << " x = " << mean_x << " size = " << mean_size << endl;
+  tmp_relativeFP->mean_vector.y = mean_y;
+  tmp_relativeFP->mean_vector.x = mean_x;
+  tmp_relativeFP->mean_vector_size = mean_size;
+
   //return tmp_featurepoint.mean_vector;
   /*
   cout << "sum_mean_vector" << endl;
@@ -1072,45 +1156,46 @@ void TopologyFeature::calib_featurepoint(vector<Centroids> centroids, vector<Fea
   double sin;
   for(int i = 0; i < relativeCent.size(); i++){
     for(int j = 0; j < featurepoint.size(); j++){
-      if(relativeCent[i].value == featurepoint[j].value){
+      //for(int k = 0;  k < featurepoint[j].value.size(); k++){
+      if(relativeCent[i].value == featurepoint[j].min_label_word){
         tmp_relativeFP.value = featurepoint[j].value;
         tmp_relativeFP.vectorXY.x = featurepoint[j].coordinate.x - centroids[min_index].centroids.x;
         tmp_relativeFP.vectorXY.y = featurepoint[j].coordinate.y - centroids[min_index].centroids.y;
         tmp_relativeFP.vectorSize = sqrt(pow(tmp_relativeFP.vectorXY.x, 2.0) + pow(tmp_relativeFP.vectorXY.y, 2.0));
         if(relativeCent[i].value != centroids[min_index].value){
-        if(relativeCent[i].vectorSize > 0){
-          bcos = (relativeCent[i].vectorXY.x * tmp_relativeFP.vectorXY.x + relativeCent[i].vectorXY.y * tmp_relativeFP.vectorXY.y )/ relativeCent[i].vectorSize;
-          suisen_x = centroids[min_index].centroids.x + relativeCent[i].vectorXY.x * bcos / relativeCent[i].vectorSize;
-          suisen_y = centroids[min_index].centroids.y + relativeCent[i].vectorXY.y * bcos / relativeCent[i].vectorSize;
-        }else{
-          bcos = 0;
-          suisen_x = 0;
-          suisen_y = 0;
-        }
-        tmp_calib_y = sqrt(pow(featurepoint[j].coordinate.x - suisen_x, 2.0) + pow(featurepoint[j].coordinate.y - suisen_y, 2.0));
-        if(tmp_relativeFP.vectorSize > 0){
-          cos = bcos / tmp_relativeFP.vectorSize;
-          sin = tmp_calib_y / tmp_relativeFP.vectorSize;
-        }else{
-          cos = 0;
-          sin = 0;
-        }
-        if(cos >= 0 && sin >= 0){
-          tmp_relativeFP.calib_x = bcos;
-          tmp_relativeFP.calib_y = tmp_calib_y;
-        }
-        else if(cos < 0 && sin >= 0){
-          tmp_relativeFP.calib_x = -bcos;
-          tmp_relativeFP.calib_y = tmp_calib_y;
-        }
-        else if(cos >= 0 && sin < 0){
-          tmp_relativeFP.calib_x = bcos;
-          tmp_relativeFP.calib_y = -tmp_calib_y;
-        }
-        else if(cos < 0 && sin < 0){
-          tmp_relativeFP.calib_x = -bcos;
-          tmp_relativeFP.calib_y = -tmp_calib_y;
-        }
+          if(relativeCent[i].vectorSize > 0){
+            bcos = (relativeCent[i].vectorXY.x * tmp_relativeFP.vectorXY.x + relativeCent[i].vectorXY.y * tmp_relativeFP.vectorXY.y )/ relativeCent[i].vectorSize;
+            suisen_x = centroids[min_index].centroids.x + relativeCent[i].vectorXY.x * (bcos / relativeCent[i].vectorSize);
+            suisen_y = centroids[min_index].centroids.y + relativeCent[i].vectorXY.y * (bcos / relativeCent[i].vectorSize);
+          }else{
+            bcos = 0;
+            //suisen_x = 0;
+            //suisen_y = 0;
+          }
+          tmp_calib_y = sqrt(pow(featurepoint[j].coordinate.x - suisen_x, 2.0) + pow(featurepoint[j].coordinate.y - suisen_y, 2.0));
+          if(tmp_relativeFP.vectorSize > 0){
+            cos = bcos / tmp_relativeFP.vectorSize;
+            sin = tmp_calib_y / tmp_relativeFP.vectorSize;
+          }else{
+            cos = 0;
+            sin = 0;
+          }
+          if(cos >= 0 && sin >= 0){
+            tmp_relativeFP.calib_x = bcos;
+            tmp_relativeFP.calib_y = tmp_calib_y;
+          }
+          else if(cos < 0 && sin >= 0){
+            tmp_relativeFP.calib_x = -bcos;
+            tmp_relativeFP.calib_y = tmp_calib_y;
+          }
+          else if(cos >= 0 && sin < 0){
+            tmp_relativeFP.calib_x = bcos;
+            tmp_relativeFP.calib_y = -tmp_calib_y;
+          }
+          else if(cos < 0 && sin < 0){
+            tmp_relativeFP.calib_x = -bcos;
+            tmp_relativeFP.calib_y = -tmp_calib_y;
+          }
         }else{
           tmp_relativeFP.calib_x = tmp_relativeFP.vectorXY.x;
           tmp_relativeFP.calib_y = tmp_relativeFP.vectorXY.y;
@@ -1119,19 +1204,22 @@ void TopologyFeature::calib_featurepoint(vector<Centroids> centroids, vector<Fea
         tmp_relativeFP.coordinate.y = featurepoint[j].coordinate.y;
         tmp_relativeFP.boundary = featurepoint[j].boundary;
         tmp_relativeFP.ave_keypoint = featurepoint[j].ave_keypoint;
-        tmp_relativeFP.mean_vector.x = featurepoint[j].mean_vector.x;
-        tmp_relativeFP.mean_vector.y = featurepoint[j].mean_vector.y;
+        //tmp_relativeFP.mean_vector.x = featurepoint[j].mean_vector.x;
+        //tmp_relativeFP.mean_vector.y = featurepoint[j].mean_vector.y;
         tmp_relativeFP.min_label_word = featurepoint[j].min_label_word;
         tmp_relativeFP.one_dimention_scanning = featurepoint[j].one_dimention_scanning;
 
+        calcMeanVector(&tmp_relativeFP);
+
         relativeFP.push_back(tmp_relativeFP);
-      }
+      //}
       /*
       cout << "relative_featurepoint ===============================================" << endl;
       cout << "value = " << tmp_relativeFP.value << endl;
       cout << "calib x = " << tmp_relativeFP.calib_coordinate.x << " calib y = " << tmp_relativeFP.calib_coordinate.y << endl;
       cout << "pure x = " << tmp_relativeFP.coordinate.x << " pure y = " << tmp_relativeFP.coordinate.y << endl;
       */
+      }
     }
   }
   cout << "--------------------------------------------------------------" << endl;
@@ -1306,7 +1394,7 @@ Mat TopologyFeature::inputCreateLabelImg(Mat input_hsv){
 
   Mat label_input_img = Mat(input_y, input_x, CV_8UC1);
 
-  int tmp_range = 20;
+  int tmp_range = 30;
   int flag = 1;
   label_input_img = template_splitRegion(tmp_range, input_hsv, correct_input_v_hist, flag);
 
@@ -1321,19 +1409,23 @@ vector<TopologyFeature::cent2feature> TopologyFeature::calc_relative_centroids2f
 
   vector<cent2feature> template_vector;
   cent2feature tmp_template_vector;
-
   for(int i = 0; i < template_relative_centroids.size(); i++){
     for(int j = 0; j < template_relative_featurepoint.size(); j++){
-      if(template_relative_centroids[i].value == template_relative_featurepoint[j].value){
-        tmp_template_vector.value = template_relative_centroids[i].value;
-        tmp_template_vector.vectorC2F.x = template_relative_featurepoint[j].calib_x - template_relative_centroids[i].calib_x;
-        tmp_template_vector.vectorC2F.y = template_relative_featurepoint[j].calib_y - template_relative_centroids[i].calib_y;
-        tmp_template_vector.pure_featurepoint.x = template_relative_featurepoint[j].coordinate.x;
-        tmp_template_vector.pure_featurepoint.y = template_relative_featurepoint[j].coordinate.y;
-        tmp_template_vector.vectorSize = sqrt(pow(tmp_template_vector.vectorC2F.x, 2.0) + pow(tmp_template_vector.vectorC2F.y, 2.0));
-        template_vector.push_back(tmp_template_vector);
+  //    for(int k = 0; k < template_relative_featurepoint[j].value.size(); k++){
+        if(template_relative_centroids[i].value == template_relative_featurepoint[j].min_label_word){
+          tmp_template_vector.word_list = template_relative_featurepoint[j].value;
+          tmp_template_vector.vectorC2F.x = template_relative_featurepoint[j].calib_x - template_relative_centroids[i].calib_x;
+          tmp_template_vector.vectorC2F.y = template_relative_featurepoint[j].calib_y - template_relative_centroids[i].calib_y;
+          tmp_template_vector.pure_featurepoint.x = template_relative_featurepoint[j].coordinate.x;
+          tmp_template_vector.pure_featurepoint.y = template_relative_featurepoint[j].coordinate.y;
+          tmp_template_vector.vectorSize = sqrt(pow(tmp_template_vector.vectorC2F.x, 2.0) + pow(tmp_template_vector.vectorC2F.y, 2.0));
+          tmp_template_vector.min_label_word = template_relative_featurepoint[j].min_label_word;
+          tmp_template_vector.mean_vector = template_relative_featurepoint[j].mean_vector;
+          tmp_template_vector.mean_vector_size = template_relative_featurepoint[j].mean_vector_size;
+          template_vector.push_back(tmp_template_vector);
+        }
       }
-    }
+//    }
   }
 
   return template_vector;
@@ -1364,97 +1456,67 @@ void TopologyFeature::featureMatching(Mat template_img, Mat input_img, vector<ke
   Mat sum_img2 = Mat(input_y, input_x + template_x, CV_8UC3);
   Mat sum_img = Mat(input_y + template_y, input_x + template_x, CV_8UC3);
 
-  Mat black_img = Mat(input_y, input_x, CV_8UC1, Scalar::all(0));
+  Mat black_img = Mat(input_y, input_x, CV_8UC1, Scalar::all(255));
 
-  hconcat(input_img, black_img, sum_img1);
-  hconcat(black_img, template_img, sum_img2);
+  hconcat(template_img, black_img, sum_img1);
+  hconcat(black_img, input_img, sum_img2);
   vconcat(sum_img1, sum_img2, sum_img);
 
   int numerator;
   double sizes;
   double simi_cos;
 
+  int mean_numerator;
+  double mean_sizes;
+  double mean_simi_cos;
+
   int h = 0;
-  //inlier and outlier matching
-  DMatch tmp_goodMatch;
-  vector<DMatch> goodMatch;
 
-  //match points
-  KeyPoint tmp_template_pt;
-  KeyPoint tmp_input_pt;
-  vector<Point2f> template_pt;
-  vector<Point2f> input_pt;
-
-  //matchPoint tmp_match_point;
-  //vector<matchPoint> match_point;
-
-/*
-  for(int x = 0; x < template_keypoint_binary.size(); x++){
-    for(int y = 0; y < input_keypoint_binary.size(); y++){
-      for(int z = 0; z < template_keypoint_binary[x].binary.size(); z++){
-        h += template_keypoint_binary[x].binary[z] - input_keypoint_binary[y].binary[z];
-        if(h != 0){
-          break;
-        }
-      }
-      if(h == 0){
-*/
-        /*
-              circle(sum_img, Point(input_x + template_keypoint_binary[x].xy.x, input_y + template_keypoint_binary[x].xy.y), 2, Scalar(200), 1, 4);
-              circle(sum_img, Point(input_keypoint_binary[y].xy.x, input_keypoint_binary[y].xy.y), 2, Scalar(200), 1, 4);
-              line(sum_img, Point(input_x + template_keypoint_binary[x].xy.x, input_y + template_keypoint_binary[x].xy.y), Point(input_keypoint_binary[y].xy.x, input_keypoint_binary[y].xy.y), Scalar(200), 1, 4 );
-
-              //Homography matrix estimation
-              tmp_template_pt.pt.x = template_keypoint_binary[x].xy.x;
-              tmp_template_pt.pt.y = template_keypoint_binary[x].xy.y;
-              template_pt.push_back(tmp_template_pt.pt);
-
-              tmp_input_pt.pt.x = input_keypoint_binary[y].xy.x;
-              tmp_input_pt.pt.y = input_keypoint_binary[y].xy.y;
-              input_pt.push_back(tmp_input_pt.pt);
-
-              //tmp_goodMatch.queryIdx = (int)template_yx[j][1];
-              //tmp_goodMatch.trainIdx = (int)sum_xy[sums][1];
-              goodMatch.push_back(tmp_goodMatch);
-              */
-  /*
-              tmp_match_point.template_match.x = template_keypoint_binary[x].xy.x;
-              tmp_match_point.template_match.y = template_keypoint_binary[x].xy.y;
-              tmp_match_point.input_match.x = input_keypoint_binary[y].xy.x;
-              tmp_match_point.input_match.y = input_keypoint_binary[y].xy.y;
-              match_point.push_back(tmp_match_point);
-      }
-      h = 0;
-    }
-  }
-  */
   matchPoint tmp_matching;
   vector<matchPoint> matching;
-    cout << "templatevector size = " << template_vector.size() << endl;
-    cout << "inputvector size = " << input_vector.size() << endl;
-    for(int i = 0; i < template_vector.size(); i++){
-        for(int j = 0; j < input_vector.size(); j++){
-          if(template_vector[i].value == input_vector[j].value){
+  cout << "templatevector size = " << template_vector.size() << endl;
+  cout << "inputvector size = " << input_vector.size() << endl;
+
+  for(int i = 0; i < template_vector.size(); i++){
+    for(int j = 0; j < input_vector.size(); j++){
+      if(template_vector[i].word_list.size() == input_vector[j].word_list.size()){
+        for(int k = 0; k < template_vector[i].word_list.size(); k++){
+          h += template_vector[i].word_list[k] - input_vector[j].word_list[k];
+        }
+        if(h == 0){
             numerator = template_vector[i].vectorC2F.x * input_vector[j].vectorC2F.x + template_vector[i].vectorC2F.y * input_vector[j].vectorC2F.y;
             sizes = template_vector[i].vectorSize * input_vector[j].vectorSize;
+            mean_numerator = template_vector[i].mean_vector.x * input_vector[j].mean_vector.x + template_vector[i].mean_vector.y * input_vector[j].mean_vector.y;
+            mean_sizes = template_vector[i].mean_vector_size * input_vector[j].mean_vector_size;
+
+/*
+            patch_numerator = template_vector[i].mean_vector.x * input_vector[j].mean_vector.x + template_vector[i].mean_vector.y * input_vector[j].mean_vector.y;
+            tmp_x = template_vector[i].mean_vector.x - input_vector[j].mean_vector.x;
+            tmp_y = template_vector[i].mean_vector.y - input_vector[j].mean_vector.y;
+            tmp_sizes = sqrt(pow(tmp_x , 2.0) + pow(tmp_y, 2.0));
+            patch_vector_sizes = template_vector[i].vectorSize * input_vector[j].vectorSize;
+*/
             if(sizes >= 0){
               simi_cos = numerator / sizes;
             }else{
               simi_cos = 0;
             }
-            //cout << "simi cos = " << simi_cos << endl;
-            //cout << "template = " << template_vector[i].value << " input = " << input_vector[j].value <<endl;
-            if(simi_cos >= 0.9){
+            if(mean_sizes >= 0){
+              mean_simi_cos = mean_numerator / mean_sizes;
+              cout << "mean_simi_cos = " << mean_simi_cos << endl;
+            }else{
+              mean_simi_cos = 0;
+            }
+            if(simi_cos >= 0.98 && mean_simi_cos >= 0.9){
               tmp_matching.template_match = template_vector[i];
               tmp_matching.input_match = input_vector[j];
               tmp_matching.simi_cos = simi_cos;
               matching.push_back(tmp_matching);
-              //cout << "t x = " << tmp_matching.template_match.pure_featurepoint.x << " t y = " << tmp_matching.template_match.pure_featurepoint.y << " i x = " << tmp_matching.input_match.pure_featurepoint.x << " i y = " << tmp_matching.input_match.pure_featurepoint.y << endl; 
             }
-           //}
         }
-        }
-      //}
+        h = 0;
+      }
+    }
   }
   float fpx;
   float fpy;
@@ -1496,6 +1558,17 @@ void TopologyFeature::featureMatching(Mat template_img, Mat input_img, vector<ke
   float b_ifpy;
   vector<matchPoint> i_buffer;
   int o;
+
+  //all matching
+  DMatch tmp_goodMatch;
+  vector<DMatch> goodMatch;
+
+  //match points
+  Point2f tmp_template_pt;
+  Point2f tmp_input_pt;
+  vector<Point2f> template_pt;
+  vector<Point2f> input_pt;
+
   for(int i = 0; i < template_matching.size(); i++){
     if(i == 0){
        i_fpx = template_matching[0].input_match.pure_featurepoint.x;
@@ -1519,47 +1592,49 @@ void TopologyFeature::featureMatching(Mat template_img, Mat input_img, vector<ke
       stable_sort(i_buffer.begin() ,i_buffer.end(), &CustPredicate);
       o = i_buffer.size()-1;
 
-      int lucky = 1 + rand() % (255 - 1);
-      circle(sum_img, Point(input_x + i_buffer[o].template_match.pure_featurepoint.x, input_y + i_buffer[o].template_match.pure_featurepoint.y), 2, Scalar(lucky), 1, 4);
-      circle(sum_img, Point(i_buffer[o].input_match.pure_featurepoint.x, i_buffer[o].input_match.pure_featurepoint.y), 2, Scalar(lucky), 1, 4);
-      line(sum_img, Point(input_x + i_buffer[o].template_match.pure_featurepoint.x, input_y + i_buffer[o].template_match.pure_featurepoint.y), Point(i_buffer[o].input_match.pure_featurepoint.x, i_buffer[o].input_match.pure_featurepoint.y), Scalar(200), 1, 4 );
 
       //Homography matrix estimation
-      tmp_template_pt.pt.x = i_buffer[o].template_match.pure_featurepoint.x;
-      tmp_template_pt.pt.y = i_buffer[o].template_match.pure_featurepoint.y;
-      template_pt.push_back(tmp_template_pt.pt);
+      tmp_template_pt.x = i_buffer[o].template_match.pure_featurepoint.x;
+      tmp_template_pt.y = i_buffer[o].template_match.pure_featurepoint.y;
+      template_pt.push_back(tmp_template_pt);
 
-      tmp_input_pt.pt.x = i_buffer[o].input_match.pure_featurepoint.x;
-      tmp_input_pt.pt.y = i_buffer[o].input_match.pure_featurepoint.y;
-      input_pt.push_back(tmp_input_pt.pt);
+      tmp_input_pt.x = i_buffer[o].input_match.pure_featurepoint.x;
+      tmp_input_pt.y = i_buffer[o].input_match.pure_featurepoint.y;
 
-      //tmp_goodMatch.queryIdx = (int)template_yx[j][1];
-      //tmp_goodMatch.trainIdx = (int)sum_xy[sums][1];
+      input_pt.push_back(tmp_input_pt);
+
+      tmp_goodMatch.queryIdx = o;
+      tmp_goodMatch.trainIdx = o;
       goodMatch.push_back(tmp_goodMatch);
 
-     //bufferをクリーン
+
+      //draw match point
+      circle(sum_img, Point(i_buffer[o].template_match.pure_featurepoint.x, i_buffer[o].template_match.pure_featurepoint.y), 2, Scalar(50), 1, 4);
+      circle(sum_img, Point(template_x + i_buffer[o].input_match.pure_featurepoint.x, template_y + i_buffer[o].input_match.pure_featurepoint.y), 2, Scalar(50), 1, 4);
+      line(sum_img, Point(i_buffer[o].template_match.pure_featurepoint.x, i_buffer[o].template_match.pure_featurepoint.y), Point(template_x + i_buffer[o].input_match.pure_featurepoint.x, template_y + i_buffer[o].input_match.pure_featurepoint.y), Scalar(50), 1, 4 );
+      //bufferをクリーン
       i_buffer.erase(i_buffer.begin(), i_buffer.end());
     }
   }
 
 
   imwrite("input_img_out/all_match_sum_img.tiff", sum_img);
-  calc_Homography(template_pt, input_pt, goodMatch);
+  calc_Homography(sum_img, template_pt, input_pt, goodMatch);
 }
 /*
 ---------------------------------------------------------------------------------------------------
 Homographyを推定してマッチング率を算出（RANSACを使用）
 ---------------------------------------------------------------------------------------------------
 */
-void TopologyFeature::calc_Homography(vector<Point2f> template_pt, vector<Point2f> input_pt, vector<DMatch> goodMatch){
+void TopologyFeature::calc_Homography(Mat sum_img, vector<Point2f> template_pt, vector<Point2f> input_pt, vector<DMatch> goodMatch){
 
   Mat masks;
-  Mat H = findHomography(template_pt, input_pt, masks, CV_LMEDS);
-  cout << "homography = " << H <<endl;
+  //Mat H = findHomography(template_pt, input_pt, masks, CV_LMEDS);
+  Mat H = findHomography(template_pt, input_pt, masks, CV_RANSAC, 3);
 
-  //while(true){
-    //imshow("goodmatch", goodMatch);
-  //}
+  cout << "homography = " << H <<endl;
+  imwrite("mask.tiff", masks);
+
   //RANSACで使われた対応点のみ抽出
   vector<DMatch> inlinerMatch;
   for (size_t i = 0; i < masks.rows; ++i) {
@@ -1570,10 +1645,12 @@ void TopologyFeature::calc_Homography(vector<Point2f> template_pt, vector<Point2
   }
   cout << "inlinerMatch count = "<< inlinerMatch.size() <<endl;
   cout << "allMatch count = " << goodMatch.size() << endl;
-  double inliner = inlinerMatch.size();
+  double inliner = inlinerMatch.size() * 1.0;
   double good = goodMatch.size();
   double matching_ratio = inliner / good;
   cout << "matching ratio = " << matching_ratio << endl;
+
+  putText(sum_img, matching_ratio, inliner, good);
 }
 
 /*
@@ -1651,6 +1728,30 @@ int TopologyFeature::graphPlot(){
   fflush(fp2);
   pclose(fp2);
   return 0;
+}
+/*
+---------------------------------------------------------------------------------------------------
+画像中に処理結果を描画
+---------------------------------------------------------------------------------------------------
+*/
+void TopologyFeature::putText(Mat sum_img, double matching_ratio, double inlier, double all){
+
+  stringstream ss;
+  ss << "Matching";
+  cv::putText(sum_img, ss.str(), cv::Point(10, 150), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0), 1, CV_AA);
+  ss.str("");
+  ss << "ALL Matches: " << all;
+  cv::putText(sum_img, ss.str(), cv::Point(10, 170), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0), 1, CV_AA);
+
+  ss.str("");
+  ss << "Inlier Matches: " << inlier;
+  cv::putText(sum_img, ss.str(), cv::Point(10, 190), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0), 1, CV_AA);
+
+  ss.str("");
+  ss << "Matching ratio: " << matching_ratio;
+  cv::putText(sum_img, ss.str(), cv::Point(10, 210), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0), 1, CV_AA);
+
+  imwrite("input_img_out/draw_text.png", sum_img);
 }
 
 /*

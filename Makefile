@@ -1,10 +1,14 @@
 CC := g++
 
 
-all: clean templateinput
+all: clean templateinput create_label
 
 templateinput: template_input.cpp
 	g++ -I/usr/local/Cellar/opencv3/3.2.0/include -L/usr/local/Cellar/opencv3/3.2.0/lib -lopencv_highgui -lopencv_core -lopencv_imgcodecs -lopencv_imgproc -lopencv_calib3d template_input.cpp -o templateinput
+
+create_label: create_label_img.cpp
+	g++ -I/usr/local/Cellar/opencv3/3.2.0/include -L/usr/local/Cellar/opencv3/3.2.0/lib -lopencv_highgui -lopencv_core -lopencv_imgcodecs -lopencv_imgproc -lopencv_calib3d create_label_img.cpp -o create_label
+
 
 topology: topology_feature.cpp
 	g++ -I/usr/local/Cellar/opencv3/3.2.0/include -L/usr/local/Cellar/opencv3/3.2.0/lib -lopencv_highgui -lopencv_core -lopencv_imgcodecs -lopencv_imgproc -lopencv_calib3d topology_feature.cpp -o topology
@@ -27,6 +31,6 @@ debug_input: input_topology_feature.cpp
 
 
 clean:
-	rm -f *.o templateinput
+	rm -f *.o create_label templateinput
 
 

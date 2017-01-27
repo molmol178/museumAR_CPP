@@ -62,6 +62,7 @@ int main(int argc, char** argv){
 
   if (match_point1.size() >= 4 && match_point2.size() >= 4) {
     Mat H = findHomography(match_point1, match_point2, masks, CV_LMEDS);
+    //Mat H = findHomography(match_point1, match_point2, masks, CV_RANSAC, 3);
     cout << "homography = " << H <<endl;
   }
 
