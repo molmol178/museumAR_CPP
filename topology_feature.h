@@ -39,6 +39,7 @@ namespace TopologyFeature{
       float calib_y;
       Point2f vectorXY;
       double vectorSize;
+      int flag;
     };
 
     struct valueAndVector{
@@ -81,17 +82,19 @@ namespace TopologyFeature{
       double simi_cos;//コサインのシミラリティ
     };
 
+    Mat correct_image(Mat input_img);
     Mat template_splitRegion(int tmp_range, Mat template_hsv, vector<int> v_count_list, int flag);
     Mat re_label(Mat label_template_img);
     Mat cleanLabelImage(Mat dst_data, int patch_size);
     Mat remapLabel(Mat label_img);
     Mat writeDstData(Mat clean_label_img);
     vector<Centroids> calcCentroids(string centroids_path, Mat img);
-    void calib_featurepoint(vector<Centroids> centroids, vector<Featurepoints> featurepoint,Mat img, vector<Centroids> *p_relative_centroids, vector<Featurepoints> *p_relative_featurepoint );
+    int calc_same_min(Mat template_img, Mat input_img);
+    void calib_featurepoint(vector<Centroids> centroids, vector<Featurepoints> featurepoint,Mat img, vector<Centroids> *p_relative_centroids, vector<Featurepoints> *p_relative_featurepoint, int target_value);
 
 
     vector<Featurepoints> featureDetection(int patchsize, Mat changed_label_img);
-
+    vector<Featurepoints> marge_featurepoint(vector<Featurepoints> featurepoint, int marge_pt);
     //void calcMeanVector(int x, int y, int min_label_word, vector<int> label_one_dimention_scanning, Featurepoints *tmp_featurepoint);
     void calcMeanVector(Featurepoints *tmp_relativeFP);
 

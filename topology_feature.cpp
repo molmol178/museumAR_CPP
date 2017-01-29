@@ -11,6 +11,28 @@
 using namespace std;
 using namespace cv;
 
+
+/*
+---------------------------------------------------------------------------------------------------
+手動でラベリングした画像に対してフォトショの色のおかしい問題を吸収
+---------------------------------------------------------------------------------------------------
+*/
+
+Mat TopologyFeature::correct_image(Mat input_img){
+  for(int i = 0; i < 255; i+=10){
+    for(int y = 0; y < input_img.rows; y++){
+      for(int x = 0; x < input_img.cols; x++){
+        for(int j = 1; j < 5; j++){
+          if(input_img.at<unsigned char>(y,x) == i + j || input_img.at<unsigned char>(y,x) == i - j){
+            input_img.at<unsigned char>(y,x) = i;
+          }
+        }
+      }
+    }
+  }
+  return input_img;
+}
+
 /*
 ---------------------------------------------------------------------------------------------------
 ヒストグラム分割によるラベリング
@@ -684,8 +706,8 @@ vector<TopologyFeature::Featurepoints> TopologyFeature::featureDetection(int pat
   int featurepoint_cnt = 0;
 
 
-  for(int y = 0; y < y_size - scan_y; y++){
-    for(int x = 0; x < x_size - scan_x; x++){
+  for(int y = 0; y < y_size - scan_y; y ++){
+    for(int x = 0; x < x_size - scan_x; x ++){
       for(int s_y = 0; s_y < scan_y; s_y++){
         for(int s_x = 0; s_x < scan_x; s_x++){
           scanning_filter.at<unsigned char>(s_y, s_x) = changed_label_img.at<unsigned char>(s_y + y, s_x + x);
@@ -819,8 +841,8 @@ vector<TopologyFeature::Featurepoints> TopologyFeature::saveFeaturePoint(int x, 
   //patch_sizeによって変わる
   tmp_featurepoint.coordinate.y = y+3;
   tmp_featurepoint.coordinate.x = x+3;
-
-  //tmp_featurepoint.boundary = tmp_boundary;
+  tmp_featurepoint.flag = 0;
+  tmp_featurepoint.boundary = tmp_boundary;
 
   tmp_featurepoint.min_label_word = min_label_word;
 
@@ -1042,7 +1064,7 @@ void TopologyFeature::calcMeanVector(Featurepoints *tmp_relativeFP){
 
   mean_size = sqrt(pow(mean_x, 2.0) + pow(mean_y, 2.0));
 
-  cout << "y = " << mean_y << " x = " << mean_x << " size = " << mean_size << endl;
+  //cout << "y = " << mean_y << " x = " << mean_x << " size = " << mean_size << endl;
   tmp_relativeFP->mean_vector.y = mean_y;
   tmp_relativeFP->mean_vector.x = mean_x;
   tmp_relativeFP->mean_vector_size = mean_size;
@@ -1061,7 +1083,129 @@ void TopologyFeature::calcMeanVector(Featurepoints *tmp_relativeFP){
   //*sum_mean_vector = mean_vector;
 }
 
+/*
+---------------------------------------------------------------------------------------------------
+近いところで出た特徴点を統合
+---------------------------------------------------------------------------------------------------
+*/
+vector<TopologyFeature::Featurepoints> TopologyFeature::marge_featurepoint(vector<Featurepoints> featurepoint, int marge_pt){
 
+
+  vector<Featurepoints> test;
+  copy(featurepoint.begin(), featurepoint.end(), back_inserter(test));
+
+  vector<Featurepoints>::iterator itr = featurepoint.begin();
+  vector<Featurepoints>::iterator t_itr = test.begin();
+
+  float x_dist = 0;
+  float y_dist = 0;
+
+  for(int i = 0; i < featurepoint.size(); i++){
+    for(int j = 0; j < test.size(); j++){
+      if(test[j].flag != 1 && featurepoint[i].flag != 1){
+        x_dist = sqrt(pow(featurepoint[i].coordinate.x - test[j].coordinate.x, 2.0));
+        y_dist = sqrt(pow(featurepoint[i].coordinate.y - test[j].coordinate.y, 2.0));
+        for(int y = 1; y < marge_pt; y++){
+          for(int x = 1; x < marge_pt; x++){
+            if(x_dist == x || y_dist == y){
+              if(x_dist < marge_pt && y_dist < marge_pt){
+                test[j].flag = 1;
+                featurepoint[j].flag = 1;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+/*
+  for(int i =0; i < test.size(); i++){
+    cout << test[i].coordinate.x <<"," << test[i].coordinate.y <<" flag = " << test[i].flag << endl;
+  }
+  */
+  while(t_itr != test.end()){
+    if(t_itr->flag == 1){
+      t_itr = test.erase(t_itr);
+    }else{
+      t_itr++;
+    }
+  }
+  /*
+  cout << "erase =====================================================" << endl;
+  for(int i =0; i < test.size(); i++){
+    cout << test[i].coordinate.x <<"," << test[i].coordinate.y <<" flag = " << test[i].flag << endl;
+  }
+  */
+  return test;
+}
+
+/*
+---------------------------------------------------------------------------------------------------
+2つの画像で共通するラベル値の内の最小値を計算
+---------------------------------------------------------------------------------------------------
+*/
+int TopologyFeature::calc_same_min(Mat template_img, Mat input_img){
+
+  vector<int> target_value;
+  vector<int> input_target_value;
+
+  target_value.push_back(template_img.at<unsigned char>(0,0));
+  int flags = 0;
+  for(int y =0; y < template_img.rows; y++){
+    for(int x = 0; x < template_img.cols; x++){
+      int tmp_value = template_img.at<unsigned char>(y,x);
+      for(int i = 0; i < target_value.size(); i++){
+        if(target_value[i] == tmp_value){
+          flags ++;
+        }
+      }
+      if(flags == 0){
+        target_value.push_back(template_img.at<unsigned char>(y,x));
+      }
+      flags = 0;
+    }
+  }
+
+  cout << "t target = " << endl;
+  for(int i = 0; i < target_value.size(); i++){
+    cout << target_value[i] << ", "; 
+  }
+
+  flags = 0;
+  input_target_value.push_back(input_img.at<unsigned char>(0,0));
+  for(int y = 0; y < input_img.rows; y++){
+    for(int x = 0; x < input_img.cols; x++){
+      int tmp_value = input_img.at<unsigned char>(y,x);
+      for(int i = 0; i < input_target_value.size(); i++){
+        if(input_target_value[i] == tmp_value){
+          flags ++;
+        }
+      }
+      if(flags == 0){
+        input_target_value.push_back(input_img.at<unsigned char>(y,x));
+      }
+      flags = 0;
+    }
+  }
+
+  cout << "i target = " << endl;
+  for(int i = 0; i < input_target_value.size(); i++){
+    cout << input_target_value[i] << ", "; 
+  }
+  vector<int> tmp_value;
+  for(int i = 0; i < target_value.size(); i++){
+    for(int j = 0; j < input_target_value.size(); j++){
+      if(target_value[i] == target_value[j]){
+        tmp_value.push_back(target_value[i]);
+      }
+    }
+  }
+
+  int min_value = *min_element(tmp_value.begin(), tmp_value.end());
+
+  return min_value;
+
+}
 /*
 ---------------------------------------------------------------------------------------------------
 検出した特徴点を画像上にマッピング
@@ -1096,18 +1240,20 @@ void TopologyFeature::writeFeaturePoint(Mat template_img, vector<Featurepoints> 
 templateとinputの重心座標を使ってinputの特徴点座標のキャリブレーション(回転不変に)
 ---------------------------------------------------------------------------------------------------
 */
-void TopologyFeature::calib_featurepoint(vector<Centroids> centroids, vector<Featurepoints> featurepoint, Mat img, vector<Centroids> *p_relative_centroids, vector<Featurepoints> *p_relative_featurepoint){
+void TopologyFeature::calib_featurepoint(vector<Centroids> centroids, vector<Featurepoints> featurepoint, Mat img, vector<Centroids> *p_relative_centroids, vector<Featurepoints> *p_relative_featurepoint, int target_value){
 
-  double maxVal;
-  double minVal;
-  minMaxLoc(img, &minVal, &maxVal);
+  //double maxVal;
+  //double minVal;
+  //minMaxLoc(img, &minVal, &maxVal);
 
   int min_index;
   for(int i = 0; i < centroids.size(); i++) {
-    if(centroids[i].value == minVal){
+    //if(centroids[i].value == minVal){
+    if(centroids[i].value == target_value){
       min_index = i;
     }
   }
+  cout << "target val = " << target_value << endl;
 
 /*
   vector<valueAndVector> valAndVector;
@@ -1503,11 +1649,12 @@ void TopologyFeature::featureMatching(Mat template_img, Mat input_img, vector<ke
             }
             if(mean_sizes >= 0){
               mean_simi_cos = mean_numerator / mean_sizes;
-              cout << "mean_simi_cos = " << mean_simi_cos << endl;
             }else{
               mean_simi_cos = 0;
             }
-            if(simi_cos >= 0.98 && mean_simi_cos >= 0.9){
+            if(simi_cos >= 0.97 ){
+              // && mean_simi_cos >= 0.99){
+               //&& template_vector[i].min_label_word == template_vector[j].min_label_word){
               tmp_matching.template_match = template_vector[i];
               tmp_matching.input_match = input_vector[j];
               tmp_matching.simi_cos = simi_cos;

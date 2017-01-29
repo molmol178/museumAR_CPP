@@ -14,7 +14,8 @@ using namespace TopologyFeature;
 
 int main(int argc, char** argv){
 
-  clock_t all_s = clock();
+  Mat test_input;
+  Mat test_template;
 
   Mat input_img;
   Mat template_img;
@@ -22,39 +23,17 @@ int main(int argc, char** argv){
   int patch_size;
   int tmp_range;
 
-  template_img = imread(argv[1], IMREAD_GRAYSCALE);
-  input_img = imread(argv[2], IMREAD_GRAYSCALE);
+  test_template= imread(argv[1], IMREAD_GRAYSCALE);
+  test_input= imread(argv[2], IMREAD_GRAYSCALE);
   patch_size = 7;
   tmp_range = 20;
 
-/*
   //手動でラベリングした画像に対してフォトショの色のおかしい問題を吸収
-  for(int i = 0; i < 255; i+=10){
-    for(int y = 0; y < input_img.rows; y++){
-      for(int x = 0; x < input_img.cols; x++){
-        for(int j = 0; j < 5; j++){
-          if(input_img.at<unsigned char>(y,x) == i + j || input_img.at<unsigned char>(y,x) == i - j){
-            input_img.at<unsigned char>(y,x) = i;
-          }
-        }
-      }
-    }
-  }
-
-  for(int i = 0; i < 255; i+=10){
-    for(int y = 0; y < template_img.rows; y++){
-      for(int x = 0; x < template_img.cols; x++){
-        for(int j = 0; j < 5; j++){
-          if(template_img.at<unsigned char>(y,x) == i + j || template_img.at<unsigned char>(y,x) == i - j){
-            template_img.at<unsigned char>(y,x) = i;
-          }
-        }
-      }
-    }
-  }
-*/
+  input_img = correct_image(test_input);
+  template_img = correct_image(test_template);
 
 
+  clock_t all_s = clock();
 
   ////cout << "calc centroids" << endl;
   vector<Centroids> input_centroids;
@@ -65,34 +44,44 @@ int main(int argc, char** argv){
   template_centroids = calcCentroids(template_centroids_path, template_img);
 
   //cout << "feature detection" << endl;
-  vector<Featurepoints> template_featurepoint;
-  vector<Featurepoints> input_featurepoint;
+  vector<Featurepoints> tmp_template_featurepoint;
+  vector<Featurepoints> tmp_input_featurepoint;
   //cout << "template_feature detection" << endl;
 
   clock_t detect_start = clock();
-  template_featurepoint = featureDetection(patch_size, template_img);
+  tmp_template_featurepoint = featureDetection(patch_size, template_img);
   clock_t detect_end = clock();
 
   //cout << "input_feature detection" << endl;
-  input_featurepoint = featureDetection(patch_size, input_img);
+  tmp_input_featurepoint = featureDetection(patch_size, input_img);
 
+  vector<Featurepoints> template_featurepoint;
+  vector<Featurepoints> input_featurepoint;
 
-
+  int marge_pt = 6;
+  template_featurepoint =  marge_featurepoint(tmp_template_featurepoint, marge_pt);
+  input_featurepoint =  marge_featurepoint(tmp_input_featurepoint, marge_pt);
 
   //cout << "write featurepoint" << endl;
-  //string writeFeatureImage_fp = "template_img_out/template_detect_feature_point.tiff";
-  //writeFeaturePoint(template_img, template_featurepoint, writeFeatureImage_fp);
-  //string writtenFeatureImage_fp = "input_img_out/input_detect_feature_point.tiff";
-  //writeFeaturePoint(input_img, input_featurepoint, writtenFeatureImage_fp);
-
+  /*
+  string writeFeatureImage_fp = "template_img_out/template_detect_feature_point.tiff";
+  writeFeaturePoint(template_img, template_featurepoint, writeFeatureImage_fp);
+  string writtenFeatureImage_fp = "input_img_out/input_detect_feature_point.tiff";
+  writeFeaturePoint(input_img, input_featurepoint, writtenFeatureImage_fp);
+  */
   //cout << "calib featurepoint" << endl;
+
+  int min_value;
+
+  min_value = calc_same_min(template_img, input_img);
+
   vector<Featurepoints> input_relative_featurepoint;
   vector<Featurepoints> template_relative_featurepoint;
   vector<Centroids> input_relative_centroids;
   vector<Centroids> template_relative_centroids;
 
-  calib_featurepoint(input_centroids, input_featurepoint, input_img, &input_relative_centroids, &input_relative_featurepoint);
-  calib_featurepoint(template_centroids, template_featurepoint,template_img, &template_relative_centroids, &template_relative_featurepoint);
+  calib_featurepoint(input_centroids, input_featurepoint, input_img, &input_relative_centroids, &input_relative_featurepoint, min_value);
+  calib_featurepoint(template_centroids, template_featurepoint,template_img, &template_relative_centroids, &template_relative_featurepoint, min_value);
 
 
 
